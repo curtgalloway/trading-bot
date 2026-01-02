@@ -1,0 +1,127 @@
+{
+  "trading_budget_eur": 50.0,
+  "minimum_balance_eur": 5.0,
+  "check_interval_minutes": 15,
+  "dry_run": true,
+  "triggers": {
+    "profit_target_percent": 25,
+    "profit_target_sell_percent": 50,
+    "final_profit_target_percent": 50,
+    "stop_loss_percent": 15,
+    "buy_dip_percent": 5,
+    "buy_assets": [
+      "BTC",
+      "ETH"
+    ],
+    "buy_amount_eur": 10
+  },
+  "fees": {
+    "taker_fee_rate": 0.012,
+    "maker_fee_rate": 0.006
+  },
+  "tracked_assets": [
+    "PEPE",
+    "VET",
+    "VARA",
+    "AMP",
+    "OXT",
+    "HOPR",
+    "ANKR",
+    "ALEPH",
+    "GRT",
+    "NU",
+    "CHZ",
+    "SKL",
+    "FET",
+    "CTSI",
+    "NEAR",
+    "BTC",
+    "ETH"
+  ],
+  "position_tracking": {
+    "PEPE": {
+      "entry_price": 4.11e-06,
+      "entry_currency": "USD",
+      "amount": 6443.69747899,
+      "entry_time": "2025-12-30T09:41:53.584432"
+    },
+    "VET": {
+      "entry_price": 0.01098,
+      "entry_currency": "USD",
+      "amount": 293.3841865960024,
+      "entry_time": "2025-12-30T09:41:54.158912"
+    },
+    "VARA": {
+      "entry_price": 0.00091,
+      "entry_currency": "USD",
+      "amount": 190.420742474312,
+      "entry_time": "2025-12-30T09:41:54.949963"
+    },
+    "NEAR": {
+      "entry_price": 1.548,
+      "entry_currency": "USD",
+      "amount": 1.7892649790493855,
+      "entry_time": "2025-12-30T09:41:55.635449"
+    },
+    "ALEPH": {
+      "entry_price": 0.0293,
+      "entry_currency": "USD",
+      "amount": 11.473006658336889,
+      "entry_time": "2025-12-30T09:41:56.657362"
+    },
+    "HOPR": {
+      "entry_price": 0.0257,
+      "entry_currency": "USD",
+      "amount": 33.771109319786866,
+      "entry_time": "2025-12-30T09:41:57.679762"
+    },
+    "FET": {
+      "entry_price": 0.2104,
+      "entry_currency": "USD",
+      "amount": 5.554185304804849,
+      "entry_time": "2025-12-30T09:41:58.286330"
+    },
+    "CTSI": {
+      "entry_price": 0.0322,
+      "entry_currency": "USD",
+      "amount": 3.8951053,
+      "entry_time": "2025-12-30T09:41:59.092188"
+    },
+    "CHZ": {
+      "entry_price": 0.0324,
+      "entry_currency": "EUR",
+      "amount": 9.19024272,
+      "entry_time": "2025-12-30T09:41:59.526744"
+    },
+    "ANKR": {
+      "entry_price": 0.00544,
+      "entry_currency": "EUR",
+      "amount": 26.61226607,
+      "entry_time": "2025-12-30T09:42:00.031871"
+    },
+    "AMP": {
+      "entry_price": 0.0017,
+      "entry_currency": "USD",
+      "amount": 49.68807419,
+      "entry_time": "2025-12-30T09:42:00.964250"
+    },
+    "SKL": {
+      "entry_price": 0.0099,
+      "entry_currency": "USD",
+      "amount": 5.57001278,
+      "entry_time": "2025-12-30T09:42:01.981484"
+    },
+    "GRT": {
+      "entry_price": 0.0302,
+      "entry_currency": "EUR",
+      "amount": 10.79573903,
+      "entry_time": "2025-12-30T09:42:03.888887"
+    },
+    "OXT": {
+      "entry_price": 0.0238,
+      "entry_currency": "USD",
+      "amount": 37.59795573,
+      "entry_time": "2025-12-30T09:42:04.744110"
+    }
+  }
+}
