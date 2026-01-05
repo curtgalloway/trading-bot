@@ -39,13 +39,6 @@
     "ETH"
   ],
   "position_tracking": {
-    "PEPE": {
-      "entry_price": 4.11e-06,
-      "entry_currency": "USD",
-      "amount": 6443.69747899,
-      "entry_time": "2025-12-30T09:41:53.584432",
-      "total_sold": 3221.848739495
-    },
     "VET": {
       "entry_price": 0.01098,
       "entry_currency": "USD",
@@ -80,7 +73,8 @@
       "entry_price": 0.2104,
       "entry_currency": "USD",
       "amount": 5.554185304804849,
-      "entry_time": "2025-12-30T09:41:58.286330"
+      "entry_time": "2025-12-30T09:41:58.286330",
+      "total_sold": 2.7770926524024246
     },
     "CTSI": {
       "entry_price": 0.0322,
@@ -124,6 +118,13 @@
       "entry_currency": "USD",
       "amount": 37.59795573,
       "entry_time": "2025-12-30T09:42:04.744110"
+    },
+    "PEPE": {
+      "entry_price": 6.77e-06,
+      "entry_currency": "USDC",
+      "amount": 6443.69747899,
+      "entry_time": "2026-01-05T16:38:31.830676",
+      "total_sold": 0.0
     }
   }
 }

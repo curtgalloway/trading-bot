@@ -1248,3 +1248,25 @@ Press Ctrl+C to stop
 2026-01-05 09:50:02,656 - ERROR - HTTP Error 400 on POST /api/v3/brokerage/orders: {"error":"INVALID_ARGUMENT","error_details":"account is not available","message":"account is not available"}
 2026-01-05 09:50:02,657 - ERROR - SELL order failed for FET
 2026-01-05 09:50:33,038 - WARNING - Could not get price for NU with any quote currency
+2026-01-05 16:28:48,575 - INFO - Trading Monitor initialized - Mode: LIVE TRADING
+2026-01-05 16:28:54,080 - INFO - Fetched EUR/USD rate: 0.8555
+2026-01-05 16:28:54,080 - INFO - Placing SELL order: 6443.69747899 PEPE on PEPE-USD
+2026-01-05 16:28:54,330 - ERROR - HTTP Error 400 on POST /api/v3/brokerage/orders: {"error":"INVALID_ARGUMENT","error_details":"account is not available","message":"account is not available"}
+2026-01-05 16:28:54,330 - ERROR - SELL order failed for PEPE
+2026-01-05 16:36:07,077 - INFO - Trading Monitor initialized - Mode: DRY RUN
+2026-01-05 16:36:12,282 - INFO - Fetched EUR/USD rate: 0.8555
+2026-01-05 16:36:12,282 - INFO - [DRY RUN] SELL 6443.69747899 PEPE @ 0.00000676 USDC, Net: €0.04, P&L: €+0.01
+2026-01-05 16:36:12,282 - INFO - Position closed: PEPE
+2026-01-05 16:36:39,509 - INFO - [DRY RUN] SELL 2.77709265 FET @ 0.28760000 USDC, Net: €0.68, P&L: €+0.18
+2026-01-05 16:36:39,509 - INFO - Partial sell: FET, sold 2.77709265, total sold: 2.77709265
+2026-01-05 16:37:09,133 - WARNING - Could not get price for NU with any quote currency
+2026-01-05 16:38:26,325 - INFO - Trading Monitor initialized - Mode: LIVE TRADING
+2026-01-05 16:38:31,830 - INFO - Fetched EUR/USD rate: 0.8558
+2026-01-05 16:38:31,831 - INFO - Tracked new position: PEPE @ 6.77e-06 USDC, amount: 6443.69747899
+2026-01-05 16:39:29,123 - WARNING - Could not get price for NU with any quote currency
+2026-01-05 16:40:45,156 - INFO - Trading Monitor initialized - Mode: LIVE TRADING
+2026-01-05 16:40:50,846 - INFO - Fetched EUR/USD rate: 0.8556
+2026-01-05 16:41:46,952 - WARNING - Could not get price for NU with any quote currency
+2026-01-05 16:41:56,530 - INFO - Placing SELL order: 5.39786952 GRT on GRT-USD
+2026-01-05 16:41:56,797 - ERROR - HTTP Error 400 on POST /api/v3/brokerage/orders: {"error":"INVALID_ARGUMENT","error_details":"account is not available","message":"account is not available"}
+2026-01-05 16:41:56,797 - ERROR - SELL order failed for GRT

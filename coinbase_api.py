@@ -167,7 +167,9 @@ class CoinbaseAPI:
             Dict with price info or None
         """
         if preferred_quotes is None:
-            preferred_quotes = ['EUR', 'USD', 'USDC', 'USDT']
+            # Prioritize USDC and EUR over USD - USD often requires specific account types
+            # that may not be available for API trading
+            preferred_quotes = ['USDC', 'EUR', 'USDT']
         
         for quote in preferred_quotes:
             pair = f"{asset}-{quote}"
