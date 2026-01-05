@@ -1225,3 +1225,26 @@ Press Ctrl+C to stop
 ======================================================================
 
 😴 Sleeping for 15 minutes...
+2026-01-02 13:23:28,598 - INFO - Trading Monitor initialized - Mode: DRY RUN
+2026-01-02 13:23:34,329 - INFO - Fetched EUR/USD rate: 0.8527
+2026-01-02 13:23:34,329 - INFO - [DRY RUN] SELL 3221.84873949 PEPE @ 0.00000525 USD, Net: €0.01, P&L: €+0.00
+2026-01-02 13:23:34,329 - INFO - Partial sell: PEPE, sold 3221.84873949, total sold: 3221.84873949
+2026-01-02 13:24:10,797 - INFO - [DRY RUN] SELL 24.84403710 AMP @ 0.00213000 USD, Net: €0.04, P&L: €+0.01
+2026-01-02 13:24:10,797 - INFO - Partial sell: AMP, sold 24.84403710, total sold: 24.84403710
+2026-01-02 13:24:31,540 - WARNING - Could not get price for NU with any quote currency
+2026-01-02 13:29:02,672 - INFO - Trading Monitor initialized - Mode: LIVE TRADING
+2026-01-02 13:29:08,631 - INFO - Fetched EUR/USD rate: 0.8529
+2026-01-02 13:30:07,452 - WARNING - Could not get price for NU with any quote currency
+2026-01-02 13:46:18,246 - WARNING - Could not get price for NU with any quote currency
+2026-01-05 09:49:30,459 - INFO - Trading Monitor initialized - Mode: LIVE TRADING
+2026-01-05 09:49:35,984 - INFO - Fetched EUR/USD rate: 0.8561
+2026-01-05 09:49:35,984 - INFO - Placing SELL order: 6443.69747899 PEPE on PEPE-USD
+2026-01-05 09:49:36,293 - ERROR - HTTP Error 400 on POST /api/v3/brokerage/orders: {"error":"INVALID_ARGUMENT","error_details":"account is not available","message":"account is not available"}
+2026-01-05 09:49:36,293 - ERROR - SELL order failed for PEPE
+2026-01-05 09:49:53,530 - INFO - Placing SELL order: 5.73650333 ALEPH on ALEPH-USD
+2026-01-05 09:49:53,747 - ERROR - HTTP Error 400 on POST /api/v3/brokerage/orders: {"error":"INVALID_ARGUMENT","error_details":"account is not available","message":"account is not available"}
+2026-01-05 09:49:53,747 - ERROR - SELL order failed for ALEPH
+2026-01-05 09:50:02,423 - INFO - Placing SELL order: 2.77709265 FET on FET-USD
+2026-01-05 09:50:02,656 - ERROR - HTTP Error 400 on POST /api/v3/brokerage/orders: {"error":"INVALID_ARGUMENT","error_details":"account is not available","message":"account is not available"}
+2026-01-05 09:50:02,657 - ERROR - SELL order failed for FET
+2026-01-05 09:50:33,038 - WARNING - Could not get price for NU with any quote currency

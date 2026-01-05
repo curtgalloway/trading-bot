@@ -2,7 +2,7 @@
   "trading_budget_eur": 50.0,
   "minimum_balance_eur": 5.0,
   "check_interval_minutes": 15,
-  "dry_run": true,
+  "dry_run": false,
   "triggers": {
     "profit_target_percent": 25,
     "profit_target_sell_percent": 50,
@@ -43,7 +43,8 @@
       "entry_price": 4.11e-06,
       "entry_currency": "USD",
       "amount": 6443.69747899,
-      "entry_time": "2025-12-30T09:41:53.584432"
+      "entry_time": "2025-12-30T09:41:53.584432",
+      "total_sold": 3221.848739495
     },
     "VET": {
       "entry_price": 0.01098,
@@ -103,7 +104,8 @@
       "entry_price": 0.0017,
       "entry_currency": "USD",
       "amount": 49.68807419,
-      "entry_time": "2025-12-30T09:42:00.964250"
+      "entry_time": "2025-12-30T09:42:00.964250",
+      "total_sold": 24.844037095
     },
     "SKL": {
       "entry_price": 0.0099,
