@@ -29,7 +29,6 @@
     "ANKR",
     "ALEPH",
     "GRT",
-    "NU",
     "CHZ",
     "SKL",
     "FET",
@@ -49,7 +48,8 @@
       "entry_price": 0.00091,
       "entry_currency": "USD",
       "amount": 190.420742474312,
-      "entry_time": "2025-12-30T09:41:54.949963"
+      "entry_time": "2025-12-30T09:41:54.949963",
+      "total_sold": 95.0
     },
     "NEAR": {
       "entry_price": 1.548,
@@ -86,13 +86,15 @@
       "entry_price": 0.0324,
       "entry_currency": "EUR",
       "amount": 9.19024272,
-      "entry_time": "2025-12-30T09:41:59.526744"
+      "entry_time": "2025-12-30T09:41:59.526744",
+      "total_sold": 4.59512136
     },
     "ANKR": {
       "entry_price": 0.00544,
       "entry_currency": "EUR",
       "amount": 26.61226607,
-      "entry_time": "2025-12-30T09:42:00.031871"
+      "entry_time": "2025-12-30T09:42:00.031871",
+      "total_sold": 13.306133035
     },
     "AMP": {
       "entry_price": 0.0017,
@@ -111,13 +113,15 @@
       "entry_price": 0.0302,
       "entry_currency": "EUR",
       "amount": 10.79573903,
-      "entry_time": "2025-12-30T09:42:03.888887"
+      "entry_time": "2025-12-30T09:42:03.888887",
+      "total_sold": 5.397869515
     },
     "OXT": {
       "entry_price": 0.0238,
       "entry_currency": "USD",
       "amount": 37.59795573,
-      "entry_time": "2025-12-30T09:42:04.744110"
+      "entry_time": "2025-12-30T09:42:04.744110",
+      "total_sold": 19.0
     },
     "PEPE": {
       "entry_price": 6.77e-06,
@@ -126,5 +130,392 @@
       "entry_time": "2026-01-05T16:38:31.830676",
       "total_sold": 0.0
     }
-  }
+  },
+  "price_history": {
+    "BTC": [
+      {
+        "price": 93373.39,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T09:06:55.334664"
+      },
+      {
+        "price": 93375.76,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T09:07:51.849472"
+      },
+      {
+        "price": 93373.25,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T09:09:21.615954"
+      },
+      {
+        "price": 93284.97,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T09:24:28.722271"
+      },
+      {
+        "price": 93219.08,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T09:31:12.545316"
+      },
+      {
+        "price": 93186.81,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T09:46:19.308437"
+      },
+      {
+        "price": 93236.01,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T10:01:26.520272"
+      },
+      {
+        "price": 93431.25,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T10:16:33.734103"
+      },
+      {
+        "price": 93424.33,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T10:31:41.134748"
+      },
+      {
+        "price": 93414.42,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T10:46:48.560067"
+      },
+      {
+        "price": 93371.53,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T11:01:55.686988"
+      },
+      {
+        "price": 93606.3,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T11:17:02.840332"
+      },
+      {
+        "price": 93531.9,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T11:32:09.897217"
+      },
+      {
+        "price": 93564.11,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T11:47:16.848704"
+      },
+      {
+        "price": 93584.98,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T12:02:23.392240"
+      },
+      {
+        "price": 93658.46,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T12:17:30.795164"
+      },
+      {
+        "price": 93750.01,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T12:32:36.989638"
+      },
+      {
+        "price": 93828.9,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T12:47:44.030986"
+      },
+      {
+        "price": 93851.9,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T13:02:50.174762"
+      },
+      {
+        "price": 93904.24,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T13:17:56.790183"
+      },
+      {
+        "price": 93816.0,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T13:33:04.182793"
+      },
+      {
+        "price": 93832.01,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T13:48:11.339909"
+      },
+      {
+        "price": 93777.63,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T14:03:18.507621"
+      },
+      {
+        "price": 93743.98,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T14:18:25.040868"
+      },
+      {
+        "price": 93709.45,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T14:33:34.483406"
+      },
+      {
+        "price": 93636.08,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T14:48:41.786648"
+      },
+      {
+        "price": 93744.05,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T15:03:48.772538"
+      },
+      {
+        "price": 94036.02,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T15:18:55.736001"
+      },
+      {
+        "price": 94160.05,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T15:34:02.688984"
+      },
+      {
+        "price": 93626.19,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T15:49:09.417215"
+      },
+      {
+        "price": 93793.9,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T16:04:15.919888"
+      },
+      {
+        "price": 94026.25,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T16:19:24.704146"
+      },
+      {
+        "price": 93988.14,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T16:34:32.460846"
+      },
+      {
+        "price": 93511.3,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T16:49:39.107293"
+      },
+      {
+        "price": 93688.33,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T17:04:45.814883"
+      },
+      {
+        "price": 93351.96,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T17:19:52.924897"
+      },
+      {
+        "price": 92787.54,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T17:35:00.660293"
+      },
+      {
+        "price": 92424.1,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T17:50:07.648608"
+      }
+    ],
+    "ETH": [
+      {
+        "price": 3225.81,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T09:06:55.681936"
+      },
+      {
+        "price": 3226.05,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T09:07:52.074036"
+      },
+      {
+        "price": 3225.44,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T09:09:21.968910"
+      },
+      {
+        "price": 3218.71,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T09:24:29.091123"
+      },
+      {
+        "price": 3216.0,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T09:31:12.940742"
+      },
+      {
+        "price": 3217.36,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T09:46:19.497417"
+      },
+      {
+        "price": 3218.25,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T10:01:26.858098"
+      },
+      {
+        "price": 3224.92,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T10:16:33.791546"
+      },
+      {
+        "price": 3224.86,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T10:31:41.326995"
+      },
+      {
+        "price": 3221.19,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T10:46:48.738637"
+      },
+      {
+        "price": 3220.21,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T11:01:55.870637"
+      },
+      {
+        "price": 3229.01,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T11:17:02.907218"
+      },
+      {
+        "price": 3227.71,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T11:32:10.064125"
+      },
+      {
+        "price": 3227.4,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T11:47:17.213367"
+      },
+      {
+        "price": 3230.24,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T12:02:23.755826"
+      },
+      {
+        "price": 3232.95,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T12:17:31.154780"
+      },
+      {
+        "price": 3237.46,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T12:32:37.175394"
+      },
+      {
+        "price": 3240.31,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T12:47:44.096610"
+      },
+      {
+        "price": 3239.25,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T13:02:50.345712"
+      },
+      {
+        "price": 3242.19,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T13:17:57.161133"
+      },
+      {
+        "price": 3240.95,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T13:33:04.545774"
+      },
+      {
+        "price": 3239.25,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T13:48:11.583374"
+      },
+      {
+        "price": 3234.01,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T14:03:18.682117"
+      },
+      {
+        "price": 3231.31,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T14:18:26.758355"
+      },
+      {
+        "price": 3234.8,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T14:33:34.851750"
+      },
+      {
+        "price": 3230.75,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T14:48:42.177809"
+      },
+      {
+        "price": 3239.85,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T15:03:48.952034"
+      },
+      {
+        "price": 3280.27,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T15:18:56.207325"
+      },
+      {
+        "price": 3295.95,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T15:34:02.958679"
+      },
+      {
+        "price": 3269.15,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T15:49:09.792617"
+      },
+      {
+        "price": 3279.95,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T16:04:16.157289"
+      },
+      {
+        "price": 3289.76,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T16:19:25.078936"
+      },
+      {
+        "price": 3291.61,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T16:34:32.646808"
+      },
+      {
+        "price": 3270.47,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T16:49:39.274422"
+      },
+      {
+        "price": 3275.72,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T17:04:45.997157"
+      },
+      {
+        "price": 3267.28,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T17:19:53.257844"
+      },
+      {
+        "price": 3249.5,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T17:35:01.027536"
+      },
+      {
+        "price": 3238.96,
+        "currency": "USDC",
+        "timestamp": "2026-01-06T17:50:07.845156"
+      }
+    ]
+  },
+  "sold_positions": {}
 }

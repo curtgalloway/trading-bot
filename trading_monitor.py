@@ -6,7 +6,7 @@ Monitors portfolio and executes trades based on price triggers
 import json
 import time
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Optional
 from coinbase_api import CoinbaseAPI
 
@@ -34,6 +34,17 @@ class TradingMonitor:
         self.api = CoinbaseAPI()
         self.eur_usd_rate = None
         logger.info(f"Trading Monitor initialized - Mode: {'DRY RUN' if self.config['dry_run'] else 'LIVE TRADING'}")
+
+        # Initialize buy-related config structures
+        if 'price_history' not in self.config:
+            self.config['price_history'] = {}
+        if 'sold_positions' not in self.config:
+            self.config['sold_positions'] = {}
+            self.save_config()
+
+        # Clean up expired data on startup
+        self.cleanup_price_history()
+        self.cleanup_sold_positions()
         
     def load_config(self, config_file):
         """Load trading configuration"""
@@ -173,7 +184,228 @@ class TradingMonitor:
             }
         
         return None
-    
+
+    def track_price_history(self, asset, price_data):
+        """Track current price for rolling 7-day window"""
+        # Initialize price_history if needed
+        if 'price_history' not in self.config:
+            self.config['price_history'] = {}
+
+        if asset not in self.config['price_history']:
+            self.config['price_history'][asset] = []
+
+        # Add new price point
+        price_entry = {
+            'price': price_data['price'],
+            'currency': price_data['currency'],
+            'timestamp': datetime.now().isoformat()
+        }
+        self.config['price_history'][asset].append(price_entry)
+
+        # Clean up old entries
+        self.cleanup_price_history()
+        self.save_config()
+        logger.debug(f"Tracked price for {asset}: {price_data['price']} {price_data['currency']}")
+
+    def cleanup_price_history(self):
+        """Remove price entries older than 7 days"""
+        if 'price_history' not in self.config:
+            return
+
+        cutoff = datetime.now() - timedelta(days=7)
+
+        for asset in list(self.config['price_history'].keys()):
+            # Filter entries newer than cutoff
+            self.config['price_history'][asset] = [
+                entry for entry in self.config['price_history'][asset]
+                if datetime.fromisoformat(entry['timestamp']) > cutoff
+            ]
+
+            # Remove asset if no entries remain
+            if not self.config['price_history'][asset]:
+                del self.config['price_history'][asset]
+
+        logger.debug(f"Cleaned up price history, {len(self.config['price_history'])} assets remain")
+
+    def record_sold_position(self, asset, price_data, amount):
+        """Track a sold position for re-entry logic"""
+        # Initialize sold_positions if needed
+        if 'sold_positions' not in self.config:
+            self.config['sold_positions'] = {}
+
+        sale_timestamp = datetime.now()
+        expires_at = sale_timestamp + timedelta(days=30)
+
+        self.config['sold_positions'][asset] = {
+            'sale_price': price_data['price'],
+            'sale_currency': price_data['currency'],
+            'sale_timestamp': sale_timestamp.isoformat(),
+            'sale_amount': amount,
+            'expires_at': expires_at.isoformat()
+        }
+
+        self.save_config()
+        logger.info(f"Recorded sold position: {asset} @ {price_data['price']} {price_data['currency']}, expires {expires_at.date()}")
+
+    def cleanup_sold_positions(self):
+        """Remove expired sold positions (older than 30 days)"""
+        if 'sold_positions' not in self.config:
+            return
+
+        now = datetime.now()
+        expired = []
+
+        for asset, pos in list(self.config['sold_positions'].items()):
+            expires_at = datetime.fromisoformat(pos['expires_at'])
+            if expires_at < now:
+                expired.append(asset)
+                del self.config['sold_positions'][asset]
+
+        if expired:
+            self.save_config()
+            logger.info(f"Removed {len(expired)} expired sold positions: {', '.join(expired)}")
+
+    def get_7day_high(self, asset):
+        """Get highest price in the last 7 days for an asset"""
+        if 'price_history' not in self.config:
+            return None
+
+        if asset not in self.config['price_history']:
+            return None
+
+        history = self.config['price_history'][asset]
+        if not history:
+            return None
+
+        # Convert all prices to EUR for comparison
+        if self.eur_usd_rate is None:
+            self.eur_usd_rate = self.get_eur_usd_rate()
+
+        max_price_eur = 0
+        for entry in history:
+            price = entry['price']
+            currency = entry['currency']
+
+            # Convert to EUR if needed
+            if currency == 'EUR':
+                price_eur = price
+            elif currency in ['USD', 'USDC', 'USDT']:
+                price_eur = price * self.eur_usd_rate
+            else:
+                price_eur = price  # Assume EUR if unknown
+
+            max_price_eur = max(max_price_eur, price_eur)
+
+        return max_price_eur if max_price_eur > 0 else None
+
+    def check_buy_triggers(self):
+        """Check for buy opportunities (dip buying and re-entry)"""
+        buy_opportunities = []
+
+        # Get current holdings to avoid duplicate buys
+        holdings = self.get_holdings()
+
+        # Check buy-the-dip for configured assets (BTC, ETH)
+        buy_assets = self.config['triggers'].get('buy_assets', [])
+        for asset in buy_assets:
+            # Skip if we already hold this asset (buy-the-dip only)
+            if asset in holdings:
+                continue
+
+            # Get current price
+            price_data = self.get_price(asset)
+            if not price_data:
+                continue
+
+            # Get 7-day high
+            seven_day_high = self.get_7day_high(asset)
+            if seven_day_high is None:
+                logger.debug(f"No 7-day high for {asset}, skipping buy-the-dip")
+                continue
+
+            # Convert current price to EUR for comparison
+            current_price = price_data['price']
+            currency = price_data['currency']
+            if currency == 'EUR':
+                current_price_eur = current_price
+            elif currency in ['USD', 'USDC', 'USDT']:
+                if self.eur_usd_rate is None:
+                    self.eur_usd_rate = self.get_eur_usd_rate()
+                current_price_eur = current_price * self.eur_usd_rate
+            else:
+                current_price_eur = current_price
+
+            # Calculate dip percentage
+            dip_percent = ((current_price_eur - seven_day_high) / seven_day_high) * 100
+
+            # Trigger if dip is between 5-7%
+            if -7 <= dip_percent <= -5:
+                buy_opportunities.append({
+                    'action': 'BUY',
+                    'asset': asset,
+                    'reason': f'Buy-the-dip: {dip_percent:.2f}% from 7-day high',
+                    'amount_eur': self.config['triggers']['buy_amount_eur'],
+                    'price': price_data
+                })
+                logger.info(f"Buy-the-dip trigger: {asset} at {dip_percent:.2f}% from 7-day high")
+
+        # Check re-entry opportunities for sold positions
+        if 'sold_positions' in self.config:
+            for asset, sold_pos in self.config['sold_positions'].items():
+                # Get current price
+                price_data = self.get_price(asset)
+                if not price_data:
+                    continue
+
+                # Get sale price and convert to EUR
+                sale_price = sold_pos['sale_price']
+                sale_currency = sold_pos['sale_currency']
+                if sale_currency == 'EUR':
+                    sale_price_eur = sale_price
+                elif sale_currency in ['USD', 'USDC', 'USDT']:
+                    if self.eur_usd_rate is None:
+                        self.eur_usd_rate = self.get_eur_usd_rate()
+                    sale_price_eur = sale_price * self.eur_usd_rate
+                else:
+                    sale_price_eur = sale_price
+
+                # Convert current price to EUR
+                current_price = price_data['price']
+                currency = price_data['currency']
+                if currency == 'EUR':
+                    current_price_eur = current_price
+                elif currency in ['USD', 'USDC', 'USDT']:
+                    if self.eur_usd_rate is None:
+                        self.eur_usd_rate = self.get_eur_usd_rate()
+                    current_price_eur = current_price * self.eur_usd_rate
+                else:
+                    current_price_eur = current_price
+
+                # Calculate dip from sale price
+                dip_percent = ((current_price_eur - sale_price_eur) / sale_price_eur) * 100
+
+                # Trigger if dip is between 10-15%
+                if -15 <= dip_percent <= -10:
+                    buy_opportunities.append({
+                        'action': 'BUY',
+                        'asset': asset,
+                        'reason': f'Re-entry: {dip_percent:.2f}% from sale price',
+                        'amount_eur': self.config['triggers']['buy_amount_eur'],
+                        'price': price_data,
+                        'remove_from_sold': True  # Flag to remove after buy
+                    })
+                    logger.info(f"Re-entry trigger: {asset} at {dip_percent:.2f}% from sale price")
+
+        return buy_opportunities
+
+    def can_afford_buy(self, amount_eur):
+        """Check if we have sufficient budget for a buy"""
+        fee = amount_eur * self.config['fees']['taker_fee_rate']
+        total_cost = amount_eur + fee
+        new_balance = self.current_eur_balance - total_cost
+
+        return new_balance >= self.config['minimum_balance_eur']
+
     def execute_trade(self, action, asset, amount, price_data, is_full_exit=True):
         """Execute a trade (or simulate in dry-run mode)"""
         currency = price_data['currency']
@@ -226,6 +458,8 @@ class TradingMonitor:
                 self.current_eur_balance += net_proceeds
                 if asset in self.config['position_tracking']:
                     if is_full_exit:
+                        # Record sold position for re-entry tracking
+                        self.record_sold_position(asset, price_data, amount)
                         # Remove position entirely
                         del self.config['position_tracking'][asset]
                         logger.info(f"Position closed: {asset}")
@@ -238,24 +472,29 @@ class TradingMonitor:
             else:
                 # Actual sell order
                 product_id = f"{asset}-{currency}"
-                logger.info(f"Placing SELL order: {amount:.8f} {asset} on {product_id}")
-                result = self.api.place_order(product_id, "SELL", amount, 'base_size')
-                if result:
+                # Round amount to match product precision requirements (round DOWN for SELL)
+                rounded_amount = self.api.round_to_precision(amount, product_id, "SELL")
+                logger.info(f"Placing SELL order: {rounded_amount:.8f} {asset} on {product_id} (original: {amount:.8f})")
+                result = self.api.place_order(product_id, "SELL", rounded_amount, 'base_size')
+                if result and result.get('success', False):
                     print(f"  ✅ SELL order placed: {result}")
                     logger.info(f"SELL order success: {result}")
                     self.current_eur_balance += net_proceeds
-                    
+
                     # Update position tracking
                     if asset in self.config['position_tracking']:
                         if is_full_exit:
+                            # Record sold position for re-entry tracking
+                            self.record_sold_position(asset, price_data, rounded_amount)
                             del self.config['position_tracking'][asset]
                         else:
                             pos = self.config['position_tracking'][asset]
-                            pos['total_sold'] = pos.get('total_sold', 0.0) + amount
+                            pos['total_sold'] = pos.get('total_sold', 0.0) + rounded_amount
                         self.save_config()
                 else:
-                    print(f"  ❌ SELL order failed")
-                    logger.error(f"SELL order failed for {asset}")
+                    error_msg = result.get('error_response', {}).get('message', 'Unknown error') if result else 'No response'
+                    print(f"  ❌ SELL order failed: {error_msg}")
+                    logger.error(f"SELL order failed for {asset}: {error_msg}")
         
         elif action == 'BUY':
             total_cost = value_eur + fee
@@ -282,13 +521,15 @@ class TradingMonitor:
             else:
                 # Actual buy order
                 product_id = f"{asset}-{currency}"
-                logger.info(f"Placing BUY order: {amount:.8f} {asset} on {product_id}")
-                result = self.api.place_order(product_id, "BUY", value_eur, 'quote_size')
-                if result:
+                # Round quote amount to 2 decimals for fiat currencies
+                rounded_value = round(value_eur, 2)
+                logger.info(f"Placing BUY order: €{rounded_value:.2f} worth of {asset} on {product_id}")
+                result = self.api.place_order(product_id, "BUY", rounded_value, 'quote_size')
+                if result and result.get('success', False):
                     print(f"  ✅ BUY order placed: {result}")
                     logger.info(f"BUY order success: {result}")
                     self.current_eur_balance -= total_cost
-                    
+
                     # Update position tracking
                     self.config['position_tracking'][asset] = {
                         'entry_price': price,
@@ -299,8 +540,9 @@ class TradingMonitor:
                     }
                     self.save_config()
                 else:
-                    print(f"  ❌ BUY order failed")
-                    logger.error(f"BUY order failed for {asset}")
+                    error_msg = result.get('error_response', {}).get('message', 'Unknown error') if result else 'No response'
+                    print(f"  ❌ BUY order failed: {error_msg}")
+                    logger.error(f"BUY order failed for {asset}: {error_msg}")
     
     def monitor_cycle(self):
         """Run one monitoring cycle"""
@@ -322,7 +564,13 @@ class TradingMonitor:
         # Get holdings
         holdings = self.get_holdings()
         print(f"\n📊 Monitoring {len(holdings)} assets...")
-        
+
+        # Track price history for buy assets (BTC, ETH)
+        for asset in self.config['triggers'].get('buy_assets', []):
+            price_data = self.get_price(asset)
+            if price_data:
+                self.track_price_history(asset, price_data)
+
         # Check each holding for triggers
         for asset, amount in holdings.items():
             print(f"\n  {asset}: {amount:.8f}")
@@ -342,7 +590,28 @@ class TradingMonitor:
                     self.execute_trade(trigger['action'], asset, trigger['amount'], trigger['price'], is_full_exit)
             else:
                 print(f"    ⚠️  Price not available (no trading pairs found)")
-        
+
+        # Check for buy opportunities
+        buy_triggers = self.check_buy_triggers()
+        if buy_triggers:
+            print(f"\n🎯 Found {len(buy_triggers)} buy opportunity/opportunities")
+            for trigger in buy_triggers:
+                if self.can_afford_buy(trigger['amount_eur']):
+                    print(f"  {trigger['reason']}")
+                    # Calculate amount in base currency
+                    amount_base = trigger['amount_eur'] / trigger['price']['price']
+                    self.execute_trade('BUY', trigger['asset'], amount_base, trigger['price'])
+
+                    # Remove from sold positions if this was a re-entry
+                    if trigger.get('remove_from_sold', False):
+                        if 'sold_positions' in self.config and trigger['asset'] in self.config['sold_positions']:
+                            del self.config['sold_positions'][trigger['asset']]
+                            self.save_config()
+                            logger.info(f"Removed {trigger['asset']} from sold positions after re-entry")
+                else:
+                    print(f"  ⚠️  Skipping {trigger['asset']}: Insufficient budget")
+                    logger.warning(f"Insufficient budget for buy: {trigger['asset']}, need €{trigger['amount_eur']}")
+
         print(f"\n💰 Updated Trading Budget: €{self.current_eur_balance:.2f}")
         print("="*70)
         

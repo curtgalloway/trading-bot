@@ -10,6 +10,7 @@ import urllib.request
 from urllib.error import HTTPError, URLError
 from typing import Dict, Optional, List
 import logging
+import math
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,7 @@ class CoinbaseAPI:
         self.private_key = self.credentials['privateKey']
         self.key_name = self.credentials['name']
         self.last_request_time = 0
+        self.product_cache = {}  # Cache for product details
     
     def _load_credentials(self, credentials_file):
         """Load API credentials from file"""
@@ -267,6 +269,70 @@ class CoinbaseAPI:
         }
         
         return self.api_request("POST", "/api/v3/brokerage/orders", order_data)
+
+    def get_product(self, product_id: str) -> Optional[Dict]:
+        """
+        Get product details including precision requirements
+
+        Args:
+            product_id: Trading pair (e.g., 'BTC-EUR')
+
+        Returns:
+            Dict with product details or None on error
+        """
+        # Check cache first
+        if product_id in self.product_cache:
+            return self.product_cache[product_id]
+
+        # Fetch from API
+        result = self.api_request("GET", f"/api/v3/brokerage/market/products/{product_id}")
+        if result:
+            self.product_cache[product_id] = result
+            return result
+        return None
+
+    def round_to_precision(self, amount: float, product_id: str, side: str = "BUY") -> float:
+        """
+        Round amount to the correct precision for a trading pair
+
+        Args:
+            amount: Amount to round
+            product_id: Trading pair (e.g., 'BTC-EUR')
+            side: 'BUY' or 'SELL' - SELL orders round down to avoid insufficient balance
+
+        Returns:
+            Rounded amount
+        """
+        product = self.get_product(product_id)
+        if not product:
+            # Fallback to 8 decimals if we can't get product info
+            logger.warning(f"Could not get product details for {product_id}, using 8 decimal precision")
+            if side == "SELL":
+                return math.floor(amount * 1e8) / 1e8
+            return round(amount, 8)
+
+        # Log the full product details to debug
+        logger.info(f"Product details for {product_id}: base_increment={product.get('base_increment')}, base_min_size={product.get('base_min_size')}, base_max_size={product.get('base_max_size')}")
+
+        # Get base_increment from product details
+        base_increment = product.get('base_increment', '0.00000001')
+
+        # Count decimal places in base_increment
+        if '.' in base_increment:
+            decimals = len(base_increment.split('.')[1].rstrip('0'))
+        else:
+            decimals = 0
+
+        # For SELL orders, always round DOWN to avoid selling more than we have
+        # For BUY orders, use standard rounding
+        if side == "SELL":
+            multiplier = 10 ** decimals
+            rounded = math.floor(amount * multiplier) / multiplier
+        else:
+            rounded = round(amount, decimals)
+
+        logger.info(f"Rounded {amount} to {rounded} ({decimals} decimals, side={side}, base_increment={base_increment}) for {product_id}")
+        return rounded
 
 
 def get_price_simple(product_id: str) -> Optional[Dict]:
