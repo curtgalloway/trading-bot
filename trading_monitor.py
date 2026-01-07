@@ -8,7 +8,7 @@ import time
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, Optional
-from coinbase_api import CoinbaseAPI
+from coinbase_api import CoinbaseAPI, validate_config
 
 # Configure logging
 logging.basicConfig(
@@ -21,18 +21,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Constants
-USD_TO_EUR_FALLBACK = 0.92  # Fallback conversion rate
-USDC_TO_EUR_FALLBACK = 0.92
-USDT_TO_EUR_FALLBACK = 0.92
-
 class TradingMonitor:
     def __init__(self, config_file='trading_config.json'):
         self.config = self.load_config(config_file)
         self.config_file = config_file
         self.current_eur_balance = self.config['trading_budget_eur']
         self.api = CoinbaseAPI()
-        self.eur_usd_rate = None
         logger.info(f"Trading Monitor initialized - Mode: {'DRY RUN' if self.config['dry_run'] else 'LIVE TRADING'}")
 
         # Initialize buy-related config structures
@@ -47,9 +41,21 @@ class TradingMonitor:
         self.cleanup_sold_positions()
         
     def load_config(self, config_file):
-        """Load trading configuration"""
-        with open(config_file, 'r') as f:
-            return json.load(f)
+        """Load and validate trading configuration"""
+        try:
+            with open(config_file, 'r') as f:
+                config = json.load(f)
+            validate_config(config)
+            return config
+        except FileNotFoundError:
+            logger.error(f"Configuration file {config_file} not found")
+            raise
+        except ValueError as e:
+            logger.error(f"Invalid configuration: {e}")
+            raise
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid JSON in configuration file: {e}")
+            raise
     
     def save_config(self):
         """Save updated configuration (for position tracking)"""
@@ -67,20 +73,6 @@ class TradingMonitor:
     def get_eur_balance(self):
         """Get current EUR balance"""
         return self.api.get_balance('EUR')
-    
-    def get_eur_usd_rate(self):
-        """Get current EUR/USD exchange rate"""
-        try:
-            # Get USD-EUR price
-            price_data = self.api.get_price('USDC', preferred_quotes=['EUR'])
-            if price_data and price_data['currency'] == 'EUR':
-                rate = price_data['price']
-                logger.info(f"Fetched EUR/USD rate: {rate:.4f}")
-                return rate
-        except Exception as e:
-            logger.warning(f"Failed to fetch EUR/USD rate: {e}, using fallback {USD_TO_EUR_FALLBACK}")
-        
-        return USD_TO_EUR_FALLBACK
     
     def get_holdings(self):
         """Get non-zero holdings"""
@@ -105,20 +97,7 @@ class TradingMonitor:
         currency = current_price_data['currency']
         
         value = amount * price
-        
-        # Convert to EUR if needed
-        if currency == 'EUR':
-            return value
-        elif currency == 'USD':
-            if self.eur_usd_rate is None:
-                self.eur_usd_rate = self.get_eur_usd_rate()
-            value = value * self.eur_usd_rate
-        elif currency in ['USDT', 'USDC']:
-            if self.eur_usd_rate is None:
-                self.eur_usd_rate = self.get_eur_usd_rate()
-            value = value * self.eur_usd_rate
-        
-        return value
+        return self.api.convert_to_eur(value, currency)
     
     def check_triggers(self, asset, amount, current_price_data):
         """Check if any triggers are hit for this asset"""
@@ -143,10 +122,14 @@ class TradingMonitor:
             return None
         
         entry_price = positions[asset]['entry_price']
+        entry_currency = positions[asset]['entry_currency']
         current_price = current_price_data['price']
+        current_currency = current_price_data['currency']
         
-        # Calculate percentage change
-        pct_change = ((current_price - entry_price) / entry_price) * 100
+        # Calculate percentage change - convert to same currency (EUR) for accurate comparison
+        entry_price_eur = self.api.convert_to_eur(entry_price, entry_currency)
+        current_price_eur = self.api.convert_to_eur(current_price, current_currency)
+        pct_change = ((current_price_eur - entry_price_eur) / entry_price_eur) * 100
         
         # Check final profit target (sell all at +50%) - check this FIRST
         if pct_change >= triggers['final_profit_target_percent']:
@@ -277,23 +260,10 @@ class TradingMonitor:
         if not history:
             return None
 
-        # Convert all prices to EUR for comparison
-        if self.eur_usd_rate is None:
-            self.eur_usd_rate = self.get_eur_usd_rate()
-
+        # Convert all prices to EUR for comparison using centralized function
         max_price_eur = 0
         for entry in history:
-            price = entry['price']
-            currency = entry['currency']
-
-            # Convert to EUR if needed
-            if currency == 'EUR':
-                price_eur = price
-            elif currency in ['USD', 'USDC', 'USDT']:
-                price_eur = price * self.eur_usd_rate
-            else:
-                price_eur = price  # Assume EUR if unknown
-
+            price_eur = self.api.convert_to_eur(entry['price'], entry['currency'])
             max_price_eur = max(max_price_eur, price_eur)
 
         return max_price_eur if max_price_eur > 0 else None
@@ -324,16 +294,7 @@ class TradingMonitor:
                 continue
 
             # Convert current price to EUR for comparison
-            current_price = price_data['price']
-            currency = price_data['currency']
-            if currency == 'EUR':
-                current_price_eur = current_price
-            elif currency in ['USD', 'USDC', 'USDT']:
-                if self.eur_usd_rate is None:
-                    self.eur_usd_rate = self.get_eur_usd_rate()
-                current_price_eur = current_price * self.eur_usd_rate
-            else:
-                current_price_eur = current_price
+            current_price_eur = self.api.convert_to_eur(price_data['price'], price_data['currency'])
 
             # Calculate dip percentage
             dip_percent = ((current_price_eur - seven_day_high) / seven_day_high) * 100
@@ -357,29 +318,9 @@ class TradingMonitor:
                 if not price_data:
                     continue
 
-                # Get sale price and convert to EUR
-                sale_price = sold_pos['sale_price']
-                sale_currency = sold_pos['sale_currency']
-                if sale_currency == 'EUR':
-                    sale_price_eur = sale_price
-                elif sale_currency in ['USD', 'USDC', 'USDT']:
-                    if self.eur_usd_rate is None:
-                        self.eur_usd_rate = self.get_eur_usd_rate()
-                    sale_price_eur = sale_price * self.eur_usd_rate
-                else:
-                    sale_price_eur = sale_price
-
-                # Convert current price to EUR
-                current_price = price_data['price']
-                currency = price_data['currency']
-                if currency == 'EUR':
-                    current_price_eur = current_price
-                elif currency in ['USD', 'USDC', 'USDT']:
-                    if self.eur_usd_rate is None:
-                        self.eur_usd_rate = self.get_eur_usd_rate()
-                    current_price_eur = current_price * self.eur_usd_rate
-                else:
-                    current_price_eur = current_price
+                # Convert both to EUR for comparison using centralized function
+                sale_price_eur = self.api.convert_to_eur(sold_pos['sale_price'], sold_pos['sale_currency'])
+                current_price_eur = self.api.convert_to_eur(price_data['price'], price_data['currency'])
 
                 # Calculate dip from sale price
                 dip_percent = ((current_price_eur - sale_price_eur) / sale_price_eur) * 100
@@ -412,15 +353,8 @@ class TradingMonitor:
         price = price_data['price']
         value = amount * price
         
-        # Convert to EUR if needed
-        if currency == 'EUR':
-            value_eur = value
-        elif currency in ['USD', 'USDC', 'USDT']:
-            if self.eur_usd_rate is None:
-                self.eur_usd_rate = self.get_eur_usd_rate()
-            value_eur = value * self.eur_usd_rate
-        else:
-            value_eur = value
+        # Convert to EUR using centralized function
+        value_eur = self.api.convert_to_eur(value, currency)
         
         # Calculate fees
         fee = value_eur * self.config['fees']['taker_fee_rate']
@@ -432,15 +366,9 @@ class TradingMonitor:
             profit_loss = 0
             if asset in self.config['position_tracking']:
                 pos = self.config['position_tracking'][asset]
-                entry_price = pos['entry_price']
-                entry_currency = pos['entry_currency']
                 
-                # Calculate cost basis for this sale
-                cost_basis_per_unit = entry_price
-                if entry_currency != 'EUR' and entry_currency in ['USD', 'USDC', 'USDT']:
-                    cost_basis_per_unit = entry_price * self.eur_usd_rate
-                
-                cost_basis = amount * cost_basis_per_unit
+                # Calculate cost basis using centralized conversion
+                cost_basis = amount * self.api.convert_to_eur(pos['entry_price'], pos['entry_currency'])
                 profit_loss = net_proceeds - cost_basis
             
             if self.config['dry_run']:

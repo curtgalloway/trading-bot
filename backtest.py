@@ -5,26 +5,13 @@ Simulates what would have happened if the bot ran for the past 7 days
 """
 import json
 import logging
-from coinbase_api import CoinbaseAPI
+from coinbase_api import CoinbaseAPI, validate_config
 
 # Configure logging
 logging.basicConfig(level=logging.WARNING)
 
 # Initialize API (no authentication needed for price fetching)
 api = CoinbaseAPI()
-
-# Constants
-USD_TO_EUR_FALLBACK = 0.92
-
-def get_eur_usd_rate():
-    """Get current EUR/USD exchange rate"""
-    try:
-        price_data = api.get_price('USDC', preferred_quotes=['EUR'])
-        if price_data and price_data['currency'] == 'EUR':
-            return price_data['price']
-    except Exception:
-        pass
-    return USD_TO_EUR_FALLBACK
 
 def get_price(asset):
     """Get current price for an asset"""
@@ -33,16 +20,27 @@ def get_price(asset):
         return {'price': price_data['price'], 'currency': price_data['currency']}
     return None
 
-# Load config
-with open('trading_config.json', 'r') as f:
-    config = json.load(f)
+# Load and validate config
+try:
+    with open('trading_config.json', 'r') as f:
+        config = json.load(f)
+    validate_config(config)
+except FileNotFoundError:
+    print("Error: trading_config.json not found")
+    exit(1)
+except ValueError as e:
+    print(f"Error: Invalid configuration - {e}")
+    exit(1)
+except json.JSONDecodeError as e:
+    print(f"Error: Invalid JSON in trading_config.json - {e}")
+    exit(1)
 
 positions = config['position_tracking']
 triggers = config['triggers']
 fee_rate = config['fees']['taker_fee_rate']
 
 # Get EUR/USD rate once at start
-eur_usd_rate = get_eur_usd_rate()
+eur_usd_rate = api.get_eur_usd_rate()
 print(f"\nUsing EUR/USD rate: {eur_usd_rate:.4f}")
 
 print("="*70)
@@ -75,42 +73,19 @@ for asset, pos in positions.items():
     current_price = current_data['price']
     current_currency = current_data['currency']
     
-    # For comparison, we need same currency
-    if current_currency != entry_currency:
-        # Convert both to EUR for comparison
-        if entry_currency == 'USD':
-            entry_price_eur = entry_price * eur_usd_rate
-        else:
-            entry_price_eur = entry_price
-        
-        if current_currency == 'USD':
-            current_price_eur = current_price * eur_usd_rate
-        else:
-            current_price_eur = current_price
-        
-        pct_change = ((current_price_eur - entry_price_eur) / entry_price_eur) * 100
-    else:
-        # Calculate percentage change
-        pct_change = ((current_price - entry_price) / entry_price) * 100
+    # For comparison, we need same currency - use centralized conversion
+    entry_price_eur = api.convert_to_eur(entry_price, entry_currency)
+    current_price_eur = api.convert_to_eur(current_price, current_currency)
+    
+    pct_change = ((current_price_eur - entry_price_eur) / entry_price_eur) * 100
     
     # Calculate position values
     entry_value = amount * entry_price
     current_value = amount * current_price
     
-    # Convert to EUR if needed
-    if entry_currency == 'USD':
-        entry_value_eur = entry_value * eur_usd_rate
-    elif entry_currency in ['USDC', 'USDT']:
-        entry_value_eur = entry_value * eur_usd_rate
-    else:
-        entry_value_eur = entry_value
-    
-    if current_currency == 'USD':
-        current_value_eur = current_value * eur_usd_rate
-    elif current_currency in ['USDC', 'USDT']:
-        current_value_eur = current_value * eur_usd_rate
-    else:
-        current_value_eur = current_value
+    # Convert to EUR using centralized function
+    entry_value_eur = api.convert_to_eur(entry_value, entry_currency)
+    current_value_eur = api.convert_to_eur(current_value, current_currency)
     
     print(f"{asset}:")
     print(f"  Entry: {entry_price:.8f} {entry_currency}")
@@ -137,12 +112,9 @@ for asset, pos in positions.items():
         # Sell 50% at +25%
         sell_amount = amount * 0.5
         gross = sell_amount * current_price
-        if current_currency == 'USD':
-            gross = gross * eur_usd_rate
-        elif current_currency in ['USDC', 'USDT']:
-            gross = gross * eur_usd_rate
-        fee = gross * fee_rate
-        net = gross - fee
+        gross_eur = api.convert_to_eur(gross, current_currency)
+        fee = gross_eur * fee_rate
+        net = gross_eur - fee
         cost_basis = entry_value_eur * 0.5
         profit_eur = net - cost_basis
         trades_executed += 1

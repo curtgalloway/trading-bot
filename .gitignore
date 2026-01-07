@@ -1,0 +1,39 @@
+# Credentials - NEVER commit these!
+cdp_api_key.json
+*.key
+*.pem
+
+# Configuration with sensitive data
+trading_config.json
+
+# Logs - contain trading activity
+*.log
+monitor_output.log
+trading_monitor.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary test files
+test_order.py

@@ -4,7 +4,7 @@ Test a single monitoring cycle to verify the fix works
 This will check triggers but only execute orders in DRY RUN mode
 """
 import json
-from coinbase_api import CoinbaseAPI
+from coinbase_api import CoinbaseAPI, validate_config
 from datetime import datetime
 
 api = CoinbaseAPI()
@@ -13,23 +13,20 @@ print("\n" + "="*70)
 print("TEST: Single Monitoring Cycle (DRY RUN)")
 print("="*70)
 
-# Load config
-with open('trading_config.json', 'r') as f:
-    config = json.load(f)
+# Load and validate config
+try:
+    with open('trading_config.json', 'r') as f:
+        config = json.load(f)
+    validate_config(config)
+except (FileNotFoundError, ValueError, json.JSONDecodeError) as e:
+    print(f"Error loading config: {e}")
+    exit(1)
 
 positions = config['position_tracking']
 triggers = config['triggers']
 
-# Get EUR/USD rate
-try:
-    price_data = api.get_price('USDC', preferred_quotes=['EUR'])
-    if price_data and price_data['currency'] == 'EUR':
-        eur_usd_rate = price_data['price']
-    else:
-        eur_usd_rate = 0.92
-except:
-    eur_usd_rate = 0.92
-
+# Get EUR/USD rate using centralized function
+eur_usd_rate = api.get_eur_usd_rate()
 print(f"\nEUR/USD rate: {eur_usd_rate:.4f}")
 print(f"\nChecking triggers for tracked positions...")
 print("-"*70)
@@ -63,27 +60,10 @@ for asset in test_assets:
     print(f"  Current: {current_price:.8f} {current_currency}")
     print(f"  Trading pair: {pair}")
 
-    # Calculate percentage change
-    # Convert to same currency for comparison
-    if current_currency == entry_currency:
-        pct_change = ((current_price - entry_price) / entry_price) * 100
-    else:
-        # Convert both to EUR for comparison
-        if entry_currency == 'USD':
-            entry_price_eur = entry_price * eur_usd_rate
-        elif entry_currency == 'USDC':
-            entry_price_eur = entry_price * eur_usd_rate
-        else:
-            entry_price_eur = entry_price
-
-        if current_currency == 'USD':
-            current_price_eur = current_price * eur_usd_rate
-        elif current_currency == 'USDC':
-            current_price_eur = current_price * eur_usd_rate
-        else:
-            current_price_eur = current_price
-
-        pct_change = ((current_price_eur - entry_price_eur) / entry_price_eur) * 100
+    # Calculate percentage change using centralized conversion
+    entry_price_eur = api.convert_to_eur(entry_price, entry_currency)
+    current_price_eur = api.convert_to_eur(current_price, current_currency)
+    pct_change = ((current_price_eur - entry_price_eur) / entry_price_eur) * 100
 
     print(f"  Change: {pct_change:+.2f}%")
 

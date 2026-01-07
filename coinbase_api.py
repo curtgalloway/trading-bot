@@ -30,6 +30,12 @@ MAX_RETRIES = 3
 INITIAL_RETRY_DELAY = 1.0
 MAX_RETRY_DELAY = 30.0
 
+# Currency conversion constants
+USD_TO_EUR_FALLBACK = 0.92
+USDC_TO_EUR_FALLBACK = 0.92
+USDT_TO_EUR_FALLBACK = 0.92
+EUR_USD_RATE_CACHE_SECONDS = 3600  # Cache for 1 hour
+
 class CoinbaseAPI:
     """Wrapper for Coinbase Advanced Trade API"""
     
@@ -40,6 +46,8 @@ class CoinbaseAPI:
         self.key_name = self.credentials['name']
         self.last_request_time = 0
         self.product_cache = {}  # Cache for product details
+        self.eur_usd_rate = None  # Cached EUR/USD rate
+        self.eur_usd_rate_timestamp = 0  # When rate was last fetched
     
     def _load_credentials(self, credentials_file):
         """Load API credentials from file"""
@@ -334,6 +342,55 @@ class CoinbaseAPI:
         logger.info(f"Rounded {amount} to {rounded} ({decimals} decimals, side={side}, base_increment={base_increment}) for {product_id}")
         return rounded
 
+    def get_eur_usd_rate(self) -> float:
+        """
+        Get current EUR/USD exchange rate with caching
+        
+        Returns:
+            EUR/USD rate as float
+        """
+        # Check if cached rate is still valid
+        if self.eur_usd_rate is not None:
+            elapsed = time.time() - self.eur_usd_rate_timestamp
+            if elapsed < EUR_USD_RATE_CACHE_SECONDS:
+                logger.debug(f"Using cached EUR/USD rate: {self.eur_usd_rate:.4f} (age: {elapsed:.0f}s)")
+                return self.eur_usd_rate
+        
+        # Fetch fresh rate
+        try:
+            price_data = self.get_price('USDC', preferred_quotes=['EUR'])
+            if price_data and price_data['currency'] == 'EUR':
+                rate = price_data['price']
+                self.eur_usd_rate = rate
+                self.eur_usd_rate_timestamp = time.time()
+                logger.info(f"Fetched fresh EUR/USD rate: {rate:.4f}")
+                return rate
+        except Exception as e:
+            logger.warning(f"Failed to fetch EUR/USD rate: {e}, using fallback {USD_TO_EUR_FALLBACK}")
+        
+        # Use fallback if fetch failed
+        return USD_TO_EUR_FALLBACK
+
+    def convert_to_eur(self, amount: float, currency: str) -> float:
+        """
+        Convert an amount from any currency to EUR
+        
+        Args:
+            amount: Amount to convert
+            currency: Source currency (EUR, USD, USDC, USDT, etc.)
+            
+        Returns:
+            Amount in EUR
+        """
+        if currency == 'EUR':
+            return amount
+        elif currency in ['USD', 'USDC', 'USDT']:
+            rate = self.get_eur_usd_rate()
+            return amount * rate
+        else:
+            logger.warning(f"Unknown currency {currency}, assuming EUR")
+            return amount
+
 
 def get_price_simple(product_id: str) -> Optional[Dict]:
     """
@@ -354,3 +411,67 @@ def get_price_simple(product_id: str) -> Optional[Dict]:
     except Exception as e:
         print(f"Error fetching price: {e}")
         return None
+
+
+def validate_config(config: Dict) -> bool:
+    """
+    Validate trading configuration structure
+    
+    Args:
+        config: Configuration dictionary
+        
+    Returns:
+        True if valid, raises ValueError if invalid
+    """
+    required_fields = [
+        'trading_budget_eur',
+        'minimum_balance_eur',
+        'check_interval_minutes',
+        'dry_run',
+        'triggers',
+        'fees',
+        'tracked_assets',
+        'position_tracking'
+    ]
+    
+    for field in required_fields:
+        if field not in config:
+            raise ValueError(f"Missing required config field: {field}")
+    
+    # Validate triggers
+    required_triggers = [
+        'profit_target_percent',
+        'profit_target_sell_percent',
+        'final_profit_target_percent',
+        'stop_loss_percent'
+    ]
+    for trigger in required_triggers:
+        if trigger not in config['triggers']:
+            raise ValueError(f"Missing required trigger: {trigger}")
+    
+    # Validate fees
+    if 'taker_fee_rate' not in config['fees']:
+        raise ValueError("Missing taker_fee_rate in fees")
+    
+    # Validate numeric values
+    if config['trading_budget_eur'] <= 0:
+        raise ValueError("trading_budget_eur must be positive")
+    
+    if config['minimum_balance_eur'] < 0:
+        raise ValueError("minimum_balance_eur cannot be negative")
+    
+    if config['check_interval_minutes'] <= 0:
+        raise ValueError("check_interval_minutes must be positive")
+    
+    # Validate types
+    if not isinstance(config['dry_run'], bool):
+        raise ValueError("dry_run must be a boolean")
+    
+    if not isinstance(config['tracked_assets'], list):
+        raise ValueError("tracked_assets must be a list")
+    
+    if not isinstance(config['position_tracking'], dict):
+        raise ValueError("position_tracking must be a dictionary")
+    
+    logger.info("Config validation passed")
+    return True
