@@ -299,8 +299,8 @@ class TradingMonitor:
             # Calculate dip percentage
             dip_percent = ((current_price_eur - seven_day_high) / seven_day_high) * 100
 
-            # Trigger if dip is between 5-7%
-            if -7 <= dip_percent <= -5:
+            # Trigger if dip exceeds configured threshold
+            if dip_percent <= -self.config["triggers"]["buy_dip_percent"]:
                 buy_opportunities.append({
                     'action': 'BUY',
                     'asset': asset,
