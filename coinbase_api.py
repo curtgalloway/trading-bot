@@ -299,6 +299,26 @@ class CoinbaseAPI:
             return result
         return None
 
+    def get_min_order_size(self, product_id: str) -> float:
+        """
+        Get minimum order size for a product
+
+        Args:
+            product_id: Trading pair (e.g., 'BTC-EUR')
+
+        Returns:
+            Minimum order size as float, or 0 if unable to determine
+        """
+        product = self.get_product(product_id)
+        if not product:
+            return 0
+        
+        base_min_size = product.get('base_min_size', '0')
+        try:
+            return float(base_min_size)
+        except (ValueError, TypeError):
+            return 0
+
     def round_to_precision(self, amount: float, product_id: str, side: str = "BUY") -> float:
         """
         Round amount to the correct precision for a trading pair

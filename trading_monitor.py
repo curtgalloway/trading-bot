@@ -402,6 +402,20 @@ class TradingMonitor:
                 product_id = f"{asset}-{currency}"
                 # Round amount to match product precision requirements (round DOWN for SELL)
                 rounded_amount = self.api.round_to_precision(amount, product_id, "SELL")
+                min_size = self.api.get_min_order_size(product_id)
+                
+                # Check if rounded amount meets minimum order size
+                if min_size > 0 and rounded_amount < min_size:
+                    print(f"  ⚠️  Position too small to sell: {rounded_amount:.8f} {asset} (min: {min_size})")
+                    logger.warning(f"Skipping SELL order for {asset}: rounded amount {rounded_amount:.8f} is below minimum size {min_size} for {product_id}")
+                    # Mark position with a flag to avoid logging repeatedly
+                    if asset in self.config['position_tracking']:
+                        pos = self.config['position_tracking'][asset]
+                        if not pos.get('too_small_to_sell'):
+                            pos['too_small_to_sell'] = True
+                            self.save_config()
+                    return
+                
                 logger.info(f"Placing SELL order: {rounded_amount:.8f} {asset} on {product_id} (original: {amount:.8f})")
                 result = self.api.place_order(product_id, "SELL", rounded_amount, 'base_size')
                 if result and result.get('success', False):
@@ -502,6 +516,12 @@ class TradingMonitor:
         # Check each holding for triggers
         for asset, amount in holdings.items():
             print(f"\n  {asset}: {amount:.8f}")
+            
+            # Skip if position is flagged as too small to sell
+            if asset in self.config.get('position_tracking', {}):
+                if self.config['position_tracking'][asset].get('too_small_to_sell'):
+                    print(f"    ⚠️  Position too small to sell (flagged)")
+                    continue
             
             price_data = self.get_price(asset)
             if price_data:
