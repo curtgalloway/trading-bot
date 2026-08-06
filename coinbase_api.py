@@ -225,15 +225,43 @@ class CoinbaseAPI:
     
     def get_accounts(self) -> List[Dict]:
         """
-        Get all account balances
-        
+        Get all account balances across all pages.
+
+        The JWT must be signed for the base path only; the cursor is appended
+        to the URL separately to avoid 401 errors on paginated requests.
+
         Returns:
             List of account dictionaries
         """
-        data = self.api_request("GET", "/api/v3/brokerage/accounts")
-        if data:
-            return data.get('accounts', [])
-        return []
+        all_accounts = []
+        base_path = "/api/v3/brokerage/accounts"
+        cursor = None
+
+        while True:
+            self._rate_limit()
+            token = self.create_jwt("GET", base_path)
+            url = f"{BASE_URL}{base_path}"
+            if cursor:
+                url += f"?cursor={cursor}"
+
+            req = urllib.request.Request(
+                url,
+                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=30) as response:
+                    data = json.loads(response.read().decode())
+            except Exception as e:
+                logger.error(f"Error fetching accounts page: {e}")
+                break
+
+            all_accounts.extend(data.get("accounts", []))
+
+            if not data.get("has_next"):
+                break
+            cursor = data.get("cursor")
+
+        return all_accounts
     
     def get_balance(self, currency: str) -> float:
         """

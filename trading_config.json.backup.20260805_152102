@@ -1,0 +1,246 @@
+{
+  "trading_budget_eur": 50.0,
+  "minimum_balance_eur": 5.0,
+  "check_interval_minutes": 15,
+  "dry_run": false,
+  "triggers": {
+    "profit_target_percent": 20,
+    "profit_target_sell_percent": 50,
+    "final_profit_target_percent": 30,
+    "stop_loss_percent": 15,
+    "buy_dip_percent": 12,
+    "buy_assets": [
+      "BTC",
+      "ETH"
+    ],
+    "buy_amount_eur": 15,
+    "buy_cooldown_hours": 24
+  },
+  "fees": {
+    "taker_fee_rate": 0.012,
+    "maker_fee_rate": 0.006
+  },
+  "tracked_assets": [
+    "ALEO",
+    "ALEPH",
+    "AMP",
+    "ANKR",
+    "BAND",
+    "BTC",
+    "CGLD",
+    "CHZ",
+    "COMP",
+    "CTSI",
+    "ETH",
+    "EURC",
+    "FET",
+    "FIL",
+    "FORTH",
+    "GRT",
+    "HOPR",
+    "NEAR",
+    "NMR",
+    "NU",
+    "OXT",
+    "PEPE",
+    "RONIN",
+    "SKL",
+    "SKY",
+    "T",
+    "VARA",
+    "VET"
+  ],
+  "position_tracking": {
+    "SKY": {
+      "entry_price": 0.06378,
+      "entry_currency": "USDC",
+      "amount": 256.2099456,
+      "entry_time": "2026-02-11T11:34:09.043906",
+      "total_sold": 0.0
+    },
+    "EURC": {
+      "entry_price": 1.191,
+      "entry_currency": "USDC",
+      "amount": 0.040019,
+      "entry_time": "2026-02-11T11:34:09.272381",
+      "total_sold": 0.0
+    },
+    "PEPE": {
+      "entry_price": 3.53e-06,
+      "entry_currency": "USDC",
+      "amount": 0.69747899,
+      "entry_time": "2026-02-11T11:34:09.693734",
+      "total_sold": 0.0
+    },
+    "ALEO": {
+      "entry_price": 0.0893,
+      "entry_currency": "USDC",
+      "amount": 0.006784,
+      "entry_time": "2026-02-11T11:34:09.929897",
+      "total_sold": 0.0
+    },
+    "RONIN": {
+      "entry_price": 0.096,
+      "entry_currency": "USDC",
+      "amount": 9.7513318e-09,
+      "entry_time": "2026-02-11T11:34:10.383596",
+      "total_sold": 0.0
+    },
+    "VET": {
+      "entry_price": 0.00745,
+      "entry_currency": "USDC",
+      "amount": 0.3841865960024216,
+      "entry_time": "2026-02-11T11:34:10.879248",
+      "total_sold": 0.0
+    },
+    "VARA": {
+      "entry_price": 0.00124,
+      "entry_currency": "USDC",
+      "amount": 0.420742474312,
+      "entry_time": "2026-02-11T11:34:11.313245",
+      "total_sold": 0.0
+    },
+    "NEAR": {
+      "entry_price": 0.947,
+      "entry_currency": "USDC",
+      "amount": 0.0002649790493855,
+      "entry_time": "2026-02-11T11:34:11.722397",
+      "total_sold": 0.0
+    },
+    "ALEPH": {
+      "entry_price": 0.0224,
+      "entry_currency": "USDC",
+      "amount": 0.0730066583368895,
+      "entry_time": "2026-02-11T11:34:11.943383",
+      "total_sold": 0.0
+    },
+    "HOPR": {
+      "entry_price": 0.0199,
+      "entry_currency": "USDC",
+      "amount": 0.0711093197868663,
+      "entry_time": "2026-02-11T11:34:12.322355",
+      "total_sold": 0.0
+    },
+    "FET": {
+      "entry_price": 0.1513,
+      "entry_currency": "USDC",
+      "amount": 0.0541853048048489,
+      "entry_time": "2026-02-11T11:34:12.798484",
+      "total_sold": 0.0
+    },
+    "CTSI": {
+      "entry_price": 0.0258,
+      "entry_currency": "USDC",
+      "amount": 0.0951053,
+      "entry_time": "2026-02-11T11:34:13.024752",
+      "total_sold": 0.0
+    },
+    "CHZ": {
+      "entry_price": 0.0387,
+      "entry_currency": "USDC",
+      "amount": 0.09024272,
+      "entry_time": "2026-02-11T11:34:13.429453",
+      "total_sold": 0.0
+    },
+    "ANKR": {
+      "entry_price": 0.00427,
+      "entry_currency": "USDC",
+      "amount": 0.61226607,
+      "entry_time": "2026-02-11T11:34:13.832153",
+      "total_sold": 0.0
+    },
+    "AMP": {
+      "entry_price": 0.00147,
+      "entry_currency": "USDC",
+      "amount": 0.68807419,
+      "entry_time": "2026-02-11T11:34:14.093230",
+      "total_sold": 0.0
+    },
+    "SKL": {
+      "entry_price": 0.0061,
+      "entry_currency": "USDC",
+      "amount": 0.07001278,
+      "entry_time": "2026-02-11T11:34:14.527514",
+      "total_sold": 0.0
+    },
+    "FORTH": {
+      "entry_price": 1.0341,
+      "entry_currency": "USDC",
+      "amount": 7.1e-05,
+      "entry_time": "2026-02-11T11:34:14.937505",
+      "total_sold": 0.0
+    },
+    "NMR": {
+      "entry_price": 7.86,
+      "entry_currency": "USDC",
+      "amount": 0.00022929,
+      "entry_time": "2026-02-11T11:34:15.169633",
+      "total_sold": 0.0
+    },
+    "GRT": {
+      "entry_price": 0.0255,
+      "entry_currency": "USDC",
+      "amount": 0.00573903,
+      "entry_time": "2026-02-11T11:34:26.953997",
+      "total_sold": 0.0
+    },
+    "FIL": {
+      "entry_price": 0.868,
+      "entry_currency": "USDC",
+      "amount": 0.00043806,
+      "entry_time": "2026-02-11T11:34:27.174690",
+      "total_sold": 0.0
+    },
+    "BAND": {
+      "entry_price": 0.233,
+      "entry_currency": "USDC",
+      "amount": 0.00402264,
+      "entry_time": "2026-02-11T11:34:27.400060",
+      "total_sold": 0.0
+    },
+    "CGLD": {
+      "entry_price": 0.079,
+      "entry_currency": "USDC",
+      "amount": 0.00356552,
+      "entry_time": "2026-02-11T11:34:27.671284",
+      "total_sold": 0.0
+    },
+    "COMP": {
+      "entry_price": 15.79,
+      "entry_currency": "USDC",
+      "amount": 0.00027774,
+      "entry_time": "2026-02-11T11:34:28.104719",
+      "total_sold": 0.0
+    },
+    "OXT": {
+      "entry_price": 0.0169,
+      "entry_currency": "USDC",
+      "amount": 0.59795573,
+      "entry_time": "2026-02-11T11:34:28.561597",
+      "total_sold": 0.0
+    }
+  },
+  "price_history": {
+    "BTC": [
+      {
+        "price": 66714.73,
+        "currency": "USDC",
+        "timestamp": "2026-02-11T11:34:08.096924"
+      }
+    ],
+    "ETH": [
+      {
+        "price": 1939.9,
+        "currency": "USDC",
+        "timestamp": "2026-02-11T11:34:08.515479"
+      }
+    ]
+  },
+  "sold_positions": {},
+  "analysis": {
+    "enabled": true,
+    "frequency_days": 7,
+    "min_positions_for_analysis": 5,
+    "last_analysis": null
+  }
+}

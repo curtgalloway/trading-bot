@@ -1,0 +1,36 @@
+{
+  "trading_budget_eur": 50.0,
+  "minimum_balance_eur": 5.0,
+  "check_interval_minutes": 15,
+  "dry_run": false,
+  "triggers": {
+    "profit_target_percent": 20,
+    "profit_target_sell_percent": 50,
+    "final_profit_target_percent": 28,
+    "stop_loss_percent": 12,
+    "buy_dip_percent": 12,
+    "buy_assets": [
+      "BTC",
+      "ETH"
+    ],
+    "buy_amount_eur": 15,
+    "buy_cooldown_hours": 24
+  },
+  "fees": {
+    "taker_fee_rate": 0.012,
+    "maker_fee_rate": 0.006
+  },
+  "tracked_assets": [
+    "BTC",
+    "ETH"
+  ],
+  "position_tracking": {},
+  "price_history": {},
+  "sold_positions": {},
+  "analysis": {
+    "enabled": true,
+    "frequency_days": 7,
+    "min_positions_for_analysis": 5,
+    "last_analysis": null
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "signals": [
+    {
+      "symbol": "MSFT",
+      "action": "BUY",
+      "confidence": 0.82,
+      "cluster_size": 4,
+      "source": "congressional-trades",
+      "source_date": "2024-01-19",
+      "horizon_days": 30,
+      "reason": "Repeated multi-senator purchase cluster",
+      "metadata": {
+        "reference_price": 381.07,
+        "committee_overlap": true
+      }
+    },
+    {
+      "symbol": "JNJ",
+      "action": "SELL",
+      "confidence": 0.78,
+      "cluster_size": 3,
+      "source": "congressional-trades",
+      "source_date": "2024-01-19",
+      "horizon_days": 30,
+      "reason": "Repeated multi-senator sell cluster",
+      "metadata": {
+        "reference_price": 149.73,
+        "committee_overlap": false
+      }
+    }
+  ]
+}
