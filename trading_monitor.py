@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Optional
 from coinbase_api import CoinbaseAPI, validate_config
 
-# Configure logging
+# Configure logging for main monitor
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -20,6 +20,13 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+
+# Configure separate logger for periodic analysis
+analysis_logger = logging.getLogger('trading_analysis')
+analysis_handler = logging.FileHandler('trading_analysis.log')
+analysis_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+analysis_logger.addHandler(analysis_handler)
+analysis_logger.setLevel(logging.INFO)
 
 class TradingMonitor:
     def __init__(self, config_file='trading_config.json'):
@@ -562,9 +569,200 @@ class TradingMonitor:
 
         print(f"\n💰 Updated Trading Budget: €{self.current_eur_balance:.2f}")
         print("="*70)
-        
+
+        self.run_periodic_analysis()
+
         return True
-    
+
+    def should_run_analysis(self):
+        """Check if periodic analysis conditions are met."""
+        analysis_config = self.config.get('analysis', {})
+
+        if not analysis_config.get('enabled', False):
+            return False
+
+        last_analysis_str = analysis_config.get('last_analysis')
+        if last_analysis_str:
+            try:
+                last_analysis = datetime.fromisoformat(last_analysis_str)
+                frequency_days = analysis_config.get('frequency_days', 7)
+                if datetime.now() - last_analysis < timedelta(days=frequency_days):
+                    return False
+            except (ValueError, TypeError):
+                pass
+
+        positions = self.config.get('position_tracking', {})
+        min_positions = analysis_config.get('min_positions_for_analysis', 5)
+        if len(positions) < min_positions:
+            return False
+
+        return True
+
+    def run_periodic_analysis(self):
+        """Run periodic trigger analysis and log recommendations."""
+        if not self.should_run_analysis():
+            return
+
+        analysis_logger.info("=" * 80)
+        analysis_logger.info("PERIODIC TRIGGER ANALYSIS")
+        analysis_logger.info("=" * 80)
+
+        analysis_result = self._analyze_performance()
+
+        analysis_logger.info(f"Positions: {analysis_result['total_positions']} total, "
+                             f"{analysis_result['profitable_count']} profitable "
+                             f"({analysis_result['win_rate']:.1f}%)")
+        analysis_logger.info(f"Portfolio P&L: {analysis_result['total_pnl_pct']:+.2f}%")
+        analysis_logger.info(f"Max Gain: {analysis_result['max_gain']:+.2f}%, "
+                             f"Max Loss: {analysis_result['max_loss_pct']:.2f}%, "
+                             f"Avg: {analysis_result['avg_pnl']:+.2f}%")
+
+        current_triggers = self.config['triggers']
+        suggested_triggers = self._suggest_triggers(current_triggers, analysis_result)
+
+        analysis_logger.info("")
+        analysis_logger.info("CURRENT TRIGGERS:")
+        analysis_logger.info(f"  Buy Dip: {current_triggers['buy_dip_percent']}%")
+        analysis_logger.info(f"  Profit Target: {current_triggers['profit_target_percent']}%")
+        analysis_logger.info(f"  Final Profit: {current_triggers['final_profit_target_percent']}%")
+        analysis_logger.info(f"  Stop Loss: {current_triggers['stop_loss_percent']}%")
+
+        analysis_logger.info("")
+        analysis_logger.info("SUGGESTED TRIGGERS:")
+        analysis_logger.info(f"  Buy Dip: {suggested_triggers['buy_dip_percent']}%")
+        analysis_logger.info(f"  Profit Target: {suggested_triggers['profit_target_percent']}%")
+        analysis_logger.info(f"  Final Profit: {suggested_triggers['final_profit_target_percent']}%")
+        analysis_logger.info(f"  Stop Loss: {suggested_triggers['stop_loss_percent']}%")
+
+        significant_changes = self._find_significant_changes(current_triggers, suggested_triggers)
+        if significant_changes:
+            analysis_logger.info("")
+            analysis_logger.info("⚠️  SIGNIFICANT CHANGES RECOMMENDED:")
+            for change in significant_changes:
+                analysis_logger.info(f"  • {change}")
+            analysis_logger.info("")
+            analysis_logger.info("ACTION: Review analysis and consider updating triggers")
+            logger.warning("Periodic analysis recommends trigger changes. See trading_analysis.log")
+            print("\n⚠️  Periodic analysis recommends reviewing triggers "
+                  "(see trading_analysis.log)")
+        else:
+            analysis_logger.info("No significant trigger changes recommended.")
+            logger.info("Periodic analysis complete - no trigger changes recommended")
+
+        analysis_logger.info("=" * 80)
+
+        self.config.setdefault('analysis', {})['last_analysis'] = datetime.now().isoformat()
+        self.save_config()
+
+    def _analyze_performance(self):
+        """Analyze current positions and compute performance metrics."""
+        positions = self.config.get('position_tracking', {})
+        fee_rate = self.config['fees']['taker_fee_rate']
+
+        position_data = []
+        total_investment = 0.0
+        total_current_value = 0.0
+
+        for asset, pos_info in positions.items():
+            if pos_info.get('amount', 0) == 0 or pos_info.get('too_small_to_sell'):
+                continue
+
+            entry_price = pos_info['entry_price']
+            entry_currency = pos_info['entry_currency']
+            amount = pos_info['amount']
+
+            price_data = self.get_price(asset)
+            if not price_data:
+                continue
+
+            entry_price_eur = self.api.convert_to_eur(entry_price, entry_currency)
+            current_price_eur = self.api.convert_to_eur(
+                price_data['price'], price_data['currency'])
+
+            investment_eur = entry_price_eur * amount
+            current_value_eur = current_price_eur * amount
+            pct_change = ((current_price_eur - entry_price_eur) / entry_price_eur) * 100
+
+            position_data.append({
+                'asset': asset,
+                'pnl_pct': pct_change,
+                'entry_value': investment_eur,
+                'current_value': current_value_eur
+            })
+
+            total_investment += investment_eur
+            total_current_value += current_value_eur
+
+        total_pnl = total_current_value - total_investment
+        total_pnl_pct = (total_pnl / total_investment * 100) if total_investment > 0 else 0
+
+        profitable = [p for p in position_data if p['pnl_pct'] > 0]
+        losing = [p for p in position_data if p['pnl_pct'] < 0]
+
+        pnl_values = [p['pnl_pct'] for p in position_data]
+        max_gain = max(pnl_values) if pnl_values else 0
+        max_loss = min(pnl_values) if pnl_values else 0
+        avg_pnl = sum(pnl_values) / len(pnl_values) if pnl_values else 0
+
+        return {
+            'total_positions': len(position_data),
+            'profitable_count': len(profitable),
+            'win_rate': (len(profitable) / len(position_data) * 100) if position_data else 0,
+            'total_pnl_pct': total_pnl_pct,
+            'max_gain': max_gain,
+            'max_loss_pct': max_loss,
+            'avg_pnl': avg_pnl,
+            'position_data': position_data
+        }
+
+    def _suggest_triggers(self, current_triggers, analysis_result):
+        """Generate suggested trigger values based on performance analysis."""
+        max_gain = analysis_result['max_gain']
+        max_loss = analysis_result['max_loss_pct']
+        avg_pnl = analysis_result['avg_pnl']
+        win_rate = analysis_result['win_rate']
+
+        suggested = dict(current_triggers)
+
+        if max_gain > 0:
+            suggested['profit_target_percent'] = max(10, min(20, int(max_gain * 0.7)))
+            suggested['final_profit_target_percent'] = max(20, min(35, int(max_gain * 0.9)))
+        else:
+            suggested['profit_target_percent'] = 15
+            suggested['final_profit_target_percent'] = 30
+
+        if max_loss < 0:
+            suggested['stop_loss_percent'] = max(5, min(15, int(abs(max_loss) * 1.2)))
+        else:
+            suggested['stop_loss_percent'] = 10
+
+        if avg_pnl >= 0:
+            suggested['buy_dip_percent'] = 10
+        else:
+            suggested['buy_dip_percent'] = 12
+
+        return suggested
+
+    def _find_significant_changes(self, current, suggested):
+        """Identify trigger changes that differ by >= 2%."""
+        changes = []
+        threshold = 2.0
+        trigger_pairs = [
+            ('profit_target_percent', 'Profit Target'),
+            ('final_profit_target_percent', 'Final Profit'),
+            ('stop_loss_percent', 'Stop Loss'),
+            ('buy_dip_percent', 'Buy Dip'),
+        ]
+
+        for key, label in trigger_pairs:
+            current_val = current.get(key)
+            suggested_val = suggested.get(key)
+            if current_val is not None and suggested_val is not None:
+                if abs(suggested_val - current_val) >= threshold:
+                    changes.append(f"{label}: {current_val}% → {suggested_val}%")
+
+        return changes
+
     def run(self):
         """Main monitoring loop"""
         print("\n🚀 Crypto Trading Monitor Started")

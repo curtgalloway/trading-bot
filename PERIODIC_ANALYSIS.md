@@ -125,7 +125,19 @@ Be cautious when:
 ## Integration with Monitor
 
 The analysis runs automatically as part of `trading_monitor.py`:
-- Checks conditions at end of each monitoring cycle
+- Checks conditions at end of each monitoring cycle via `run_periodic_analysis()`
 - Runs silently if no changes needed
 - Alerts prominently when recommendations available
 - Minimal performance impact (only runs when needed)
+
+## Implementation Details
+
+The feature is implemented in `trading_monitor.py` with the following methods:
+
+| Method | Purpose |
+|---|---|
+| `should_run_analysis()` | Checks config flags, frequency-days elapsed, and minimum positions count |
+| `run_periodic_analysis()` | Orchestrates analysis: checks conditions, computes metrics, logs recommendations, updates `last_analysis` |
+| `_analyze_performance()` | Fetches current prices for all tracked positions, computes P&L, win rate, max gain/loss |
+| `_suggest_triggers()` | Generates suggested trigger values based on observed performance (max gain → profit targets, max loss → stop loss, avg P&L → buy dip) |
+| `_find_significant_changes()` | Diffs current vs. suggested triggers and flags any ≥2% difference |
