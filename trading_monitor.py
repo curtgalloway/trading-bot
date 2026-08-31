@@ -32,9 +32,13 @@ class TradingMonitor:
     def __init__(self, config_file='trading_config.json'):
         self.config = self.load_config(config_file)
         self.config_file = config_file
-        self.current_eur_balance = self.config['trading_budget_eur']
         self.api = CoinbaseAPI()
         logger.info(f"Trading Monitor initialized - Mode: {'DRY RUN' if self.config['dry_run'] else 'LIVE TRADING'}")
+
+        # Read real USDC balance from Coinbase - no more virtual budget
+        self.current_usdc_balance = self.get_usdc_balance()
+        self.min_balance_usdc = self._eur_to_usdc(self.config.get('minimum_balance_eur', 5))
+        logger.info(f"Real USDC balance loaded from Coinbase: ${self.current_usdc_balance:.2f}")
 
         # Initialize buy-related config structures
         if 'price_history' not in self.config:
@@ -80,6 +84,10 @@ class TradingMonitor:
     def get_eur_balance(self):
         """Get current EUR balance"""
         return self.api.get_balance('EUR')
+
+    def get_usdc_balance(self):
+        """Get current USDC balance - the real trading currency (buys use USDC pairs)"""
+        return self.api.get_balance('USDC')
     
     def get_holdings(self):
         """Get non-zero holdings"""
@@ -344,15 +352,47 @@ class TradingMonitor:
                     })
                     logger.info(f"Re-entry trigger: {asset} at {dip_percent:.2f}% from sale price")
 
+        # Time-based fallback: if idle too long, buy to get capital working
+        if self.config.get('time_fallback', {}).get('enabled', False):
+            last_buy = self.config.get('last_buy_timestamp')
+            idle_days = 9999  # default to idle
+            if last_buy:
+                try:
+                    last_buy_dt = datetime.fromisoformat(last_buy)
+                    idle_days = (datetime.now() - last_buy_dt).days
+                except (ValueError, TypeError):
+                    idle_days = 9999
+            idle_threshold = self.config['time_fallback'].get('max_idle_days', 30)
+            fallback_amount = self.config['time_fallback'].get('fallback_amount_eur', 10)
+            fallback_assets = self.config['time_fallback'].get('fallback_assets', self.config['triggers'].get('buy_assets', []))
+            if idle_days >= idle_threshold:
+                holdings = self.get_holdings()
+                for asset in fallback_assets:
+                    if asset not in holdings:
+                        price_data = self.get_price(asset)
+                        if price_data:
+                            buy_opportunities.append({
+                                'action': 'BUY',
+                                'asset': asset,
+                                'reason': f'Time fallback: idle {idle_days} days (>{idle_threshold}), buying to get capital working',
+                                'amount_eur': fallback_amount,
+                                'price': price_data
+                            })
+                            logger.info(f'Time fallback buy trigger: {asset} after {idle_days} idle days')
+
         return buy_opportunities
 
-    def can_afford_buy(self, amount_eur):
-        """Check if we have sufficient budget for a buy"""
-        fee = amount_eur * self.config['fees']['taker_fee_rate']
-        total_cost = amount_eur + fee
-        new_balance = self.current_eur_balance - total_cost
+    def _eur_to_usdc(self, eur_amount):
+        """Convert EUR config amounts to USDC using current rate"""
+        rate = self.api.get_eur_usd_rate()
+        return eur_amount / rate
 
-        return new_balance >= self.config['minimum_balance_eur']
+    def can_afford_buy(self, amount_eur):
+        """Check if we have sufficient real USDC balance for a buy"""
+        amount_usdc = self._eur_to_usdc(amount_eur)
+        fee = amount_usdc * self.config['fees']['taker_fee_rate']
+        total_cost = amount_usdc + fee
+        return (self.current_usdc_balance - total_cost) >= self.min_balance_usdc
 
     def execute_trade(self, action, asset, amount, price_data, is_full_exit=True):
         """Execute a trade (or simulate in dry-run mode)"""
@@ -389,8 +429,9 @@ class TradingMonitor:
                 
                 logger.info(f"[DRY RUN] SELL {amount:.8f} {asset} @ {price:.8f} {currency}, Net: €{net_proceeds:.2f}, P&L: €{profit_loss:+.2f}")
                 
-                # Update tracking
-                self.current_eur_balance += net_proceeds
+                # Update tracking (proceeds return as USDC)
+                fee_usdc = value * self.config['fees']['taker_fee_rate']
+                self.current_usdc_balance += (value - fee_usdc)
                 if asset in self.config['position_tracking']:
                     if is_full_exit:
                         # Record sold position for re-entry tracking
@@ -428,7 +469,8 @@ class TradingMonitor:
                 if result and result.get('success', False):
                     print(f"  ✅ SELL order placed: {result}")
                     logger.info(f"SELL order success: {result}")
-                    self.current_eur_balance += net_proceeds
+                    fee_usdc = value * self.config['fees']['taker_fee_rate']
+                    self.current_usdc_balance += (value - fee_usdc)
 
                     # Update position tracking
                     if asset in self.config['position_tracking']:
@@ -446,19 +488,21 @@ class TradingMonitor:
                     logger.error(f"SELL order failed for {asset}: {error_msg}")
         
         elif action == 'BUY':
-            total_cost = value_eur + fee
+            # value is already in USDC (pair currency), convert fees to USDC
+            fee_usdc = value * self.config['fees']['taker_fee_rate']
+            total_cost_usdc = value + fee_usdc
             
             if self.config['dry_run']:
                 print(f"  🟢 [DRY RUN] BUY {amount:.8f} {asset}")
                 print(f"     Price: {price:.8f} {currency}")
-                print(f"     Cost: €{value_eur:.2f}")
-                print(f"     Fee: €{fee:.2f}")
-                print(f"     Total: €{total_cost:.2f}")
+                print(f"     Cost: ${value:.2f}")
+                print(f"     Fee: ${fee_usdc:.2f}")
+                print(f"     Total: ${total_cost_usdc:.2f}")
                 
-                logger.info(f"[DRY RUN] BUY {amount:.8f} {asset} @ {price:.8f} {currency}, Total: €{total_cost:.2f}")
+                logger.info(f"[DRY RUN] BUY {amount:.8f} {asset} @ {price:.8f} {currency}, Total: ${total_cost_usdc:.2f}")
                 
-                # Update tracking
-                self.current_eur_balance -= total_cost
+                # Update tracking (USDC balance)
+                self.current_usdc_balance -= total_cost_usdc
                 self.config['position_tracking'][asset] = {
                     'entry_price': price,
                     'entry_currency': currency,
@@ -466,18 +510,19 @@ class TradingMonitor:
                     'entry_time': datetime.now().isoformat(),
                     'total_sold': 0.0
                 }
+                self.config['last_buy_timestamp'] = datetime.now().isoformat()
                 self.save_config()
             else:
                 # Actual buy order
                 product_id = f"{asset}-{currency}"
                 # Round quote amount to 2 decimals for fiat currencies
-                rounded_value = round(value_eur, 2)
-                logger.info(f"Placing BUY order: €{rounded_value:.2f} worth of {asset} on {product_id}")
+                rounded_value = round(value, 2)
+                logger.info(f"Placing BUY order: ${rounded_value:.2f} worth of {asset} on {product_id}")
                 result = self.api.place_order(product_id, "BUY", rounded_value, 'quote_size')
                 if result and result.get('success', False):
                     print(f"  ✅ BUY order placed: {result}")
                     logger.info(f"BUY order success: {result}")
-                    self.current_eur_balance -= total_cost
+                    self.current_usdc_balance -= total_cost_usdc
 
                     # Update position tracking
                     self.config['position_tracking'][asset] = {
@@ -487,6 +532,7 @@ class TradingMonitor:
                         'entry_time': datetime.now().isoformat(),
                         'total_sold': 0.0
                     }
+                    self.config['last_buy_timestamp'] = datetime.now().isoformat()
                     self.save_config()
                 else:
                     error_msg = result.get('error_response', {}).get('message', 'Unknown error') if result else 'No response'
@@ -499,15 +545,19 @@ class TradingMonitor:
         print(f"🔍 Monitoring Cycle - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         print("="*70)
         
-        # Check EUR balance
+        # Check balances - EUR display is often 0; USDC is the real trading funds
         actual_eur = self.get_eur_balance()
-        print(f"\n💶 Actual EUR Balance: €{actual_eur:.2f}")
-        print(f"💰 Trading Budget Tracker: €{self.current_eur_balance:.2f}")
+        actual_usdc = self.get_usdc_balance()
+        # Refresh real balance each cycle
+        self.current_usdc_balance = self.get_usdc_balance()
         
-        # Safety check - stop if trading budget nearly depleted
-        if self.current_eur_balance < self.config['minimum_balance_eur']:
-            print(f"\n⚠️  TRADING HALTED: Budget depleted (€{self.current_eur_balance:.2f} < €{self.config['minimum_balance_eur']})")
-            print(f"   You've lost most of your €{self.config['trading_budget_eur']} initial budget.")
+        print(f"\n💶 Actual EUR Balance: €{actual_eur:.2f}")
+        print(f"💵 Trading Funds: ${self.current_usdc_balance:.2f} USDC")
+        
+        # Safety check - stop if balance gets too low
+        if self.current_usdc_balance < self.min_balance_usdc:
+            print(f"\n⚠️  TRADING HALTED: Balance depleted (${self.current_usdc_balance:.2f} < ${self.min_balance_usdc:.2f})")
+            print(f"   Keep at least ${self.min_balance_usdc:.2f} as buffer.")
             return False
         
         # Get holdings
@@ -554,7 +604,8 @@ class TradingMonitor:
                 if self.can_afford_buy(trigger['amount_eur']):
                     print(f"  {trigger['reason']}")
                     # Calculate amount in base currency
-                    amount_base = trigger['amount_eur'] / trigger['price']['price']
+                    amount_usdc = trigger['amount_eur'] / self.api.get_eur_usd_rate()
+                    amount_base = amount_usdc / trigger['price']['price']
                     self.execute_trade('BUY', trigger['asset'], amount_base, trigger['price'])
 
                     # Remove from sold positions if this was a re-entry
@@ -567,7 +618,7 @@ class TradingMonitor:
                     print(f"  ⚠️  Skipping {trigger['asset']}: Insufficient budget")
                     logger.warning(f"Insufficient budget for buy: {trigger['asset']}, need €{trigger['amount_eur']}")
 
-        print(f"\n💰 Updated Trading Budget: €{self.current_eur_balance:.2f}")
+        print(f"\n💵 Updated Trading Funds: ${self.current_usdc_balance:.2f} USDC")
         print("="*70)
 
         self.run_periodic_analysis()
@@ -768,8 +819,9 @@ class TradingMonitor:
         print("\n🚀 Crypto Trading Monitor Started")
         print(f"Mode: {'DRY RUN' if self.config['dry_run'] else 'LIVE TRADING'}")
         print(f"Check Interval: {self.config['check_interval_minutes']} minutes")
-        print(f"Trading Budget: €{self.config['trading_budget_eur']:.2f}")
-        print(f"Minimum Balance: €{self.config['minimum_balance_eur']:.2f}")
+        print(f"Trading Mode: {'DRY RUN' if self.config['dry_run'] else 'LIVE'}")
+        print(f"Initial USDC Balance: ${self.current_usdc_balance:.2f}")
+        print(f"Minimum Buffer: ${self.min_balance_usdc:.2f}")
         print("\nPress Ctrl+C to stop\n")
         
         try:
@@ -787,7 +839,7 @@ class TradingMonitor:
                 
         except KeyboardInterrupt:
             print("\n\n⏹️  Monitor stopped by user")
-            print(f"Final Trading Budget: €{self.current_eur_balance:.2f}")
+            print(f"Final Trading Funds: ${self.current_usdc_balance:.2f} USDC")
 
 if __name__ == "__main__":
     monitor = TradingMonitor()
