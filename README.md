@@ -1,66 +1,112 @@
 # Crypto Trading Monitor Bot
 
-An automated cryptocurrency trading bot for Coinbase Advanced Trade API that implements profit-taking, stop-loss, and buy-the-dip strategies.
+An automated cryptocurrency trading bot for Coinbase Advanced Trade API that implements profit-taking, stop-loss, and buy-the-dip strategies on BTC and ETH.
+
+**Status**: Live Trading (Phase 5 — Nov 13, 2026)
+**Budget**: €50 (~$305 USDC real balance on Coinbase)
+**Minimum Balance**: €5.00
+**Monitoring**: Every 15 minutes
+
+---
+
+## Current Strategy (Phase 5 — Nov 13, 2026)
+
+### Profit-Taking (Two-Stage Exit)
+
+| Trigger | Action |
+|---------|--------|
+| **+25% gain** | Sell 50% of position (lock in gains) |
+| **+40% gain** | Sell remaining 50% (full exit) |
+
+### Stop-Loss
+
+| Trigger | Action |
+|---------|--------|
+| **-20% loss** | Sell 100% of position |
+
+### Buy-the-Dip (Primary Entry)
+
+- Compare current price vs **7-day rolling high**
+- Buy **€10** when price drops **≥12%** below 7-day high
+- Skips assets already held (no duplicate)
+- 24-hour cooldown per asset
+
+### Re-Entry Logic
+
+- After a position is sold, tracked for 30 days
+- Buys back if price drops **10–15% below sale price**
+
+### Time-Fallback Guard
+
+- If idle **30+ days** with no buys, attempts a fallback buy
+- **Requires dip ≥10%** below 7-day high (no blind buys)
+
+---
 
 ## Features
 
 ### Trading Strategies
 
-- **Profit Taking**: Automatically sells 50% of a position when it reaches +25% profit
-- **Final Profit Target**: Sells 100% of remaining position at +50% profit
-- **Stop Loss**: Protects against losses by selling 100% at -15%
-- **Buy-the-Dip**: Automatically buys BTC/ETH when price dips 5-7% from 7-day high
-- **Re-Entry Logic**: Buys back sold positions when price dips 10-15% below sale price
+- **Staged Profit Exit**: Sell 50% at +25%, remaining 50% at +40%
+- **Stop-Loss Protection**: Full exit at -20% loss
+- **Buy-the-Dip**: Buys BTC/ETH on meaningful pullbacks (≥12% from 7-day high)
+- **Re-Entry Logic**: Re-buys sold positions on deeper dips (10-15% below sale price)
+- **Time-Fallback Guard**: Prevents idle capital with dip-filtered buys
 
 ### Risk Management
 
-- Budget tracking to prevent over-trading
-- Minimum balance protection
-- Position tracking with entry price and P&L calculations
-- Configurable trading fees (taker/maker rates)
-- Dry-run mode for testing strategies without real trades
+- Real USDC balance tracking from Coinbase (not virtual budget)
+- Minimum balance protection ($5.00 buffer)
+- Position tracking with entry price and P&L
+- 24-hour buy cooldown per asset
+- Configurable trading fees (taker: 1.2%, maker: 0.6%)
+- Dry-run mode for testing
 
 ### Monitoring
 
-- Continuous monitoring at configurable intervals (default: 15 minutes)
-- Real-time portfolio tracking across multiple assets
-- Price history tracking over 7-day rolling window
-- Comprehensive logging to file and console
-- Currency conversion support (USD, EUR, USDC, USDT)
+- 15-minute monitoring cycle
+- Real-time portfolio tracking
+- 7-day rolling price history for dip detection
+- Sold position tracking (30-day expiry)
+- Comprehensive file + console logging
+- Currency conversion (EUR, USDC, USD, USDT)
+- Automatic periodic analysis (every 7 days, recommends trigger changes)
 
-## Requirements
+---
 
-- Python 3.7+
-- Coinbase Advanced Trade API credentials
-- Required Python packages:
-  - PyJWT (for API authentication)
+## How It Works
 
-## Installation
+The bot runs on a 15-minute cycle:
 
-1. Clone this repository:
-```bash
-git clone <repository-url>
-cd trading-bot
+1. **Fetch Portfolio** — Check current holdings via Coinbase API
+2. **Record Prices** — Track prices for dip detection
+3. **Check Sell Triggers** — Compare profits/losses to thresholds
+4. **Execute Sells** — Place market orders when targets hit
+5. **Check Buy Triggers** — Look for dip-buying, re-entry, and fallback opportunities
+6. **Execute Buys** — Place market orders for qualified signals
+7. **Update Tracking** — Save position and price data
+8. **Sleep** — Wait 15 minutes, repeat
+
+---
+
+## Project Structure
+
+```
+trading_monitor.py        # Main bot script (continuous monitoring loop)
+coinbase_api.py           # Coinbase API wrapper + utilities
+dip_signal_analyzer.py    # Market signals (funding rates, liquidations, fear/greed)
+check_dip_signals.py      # Quick manual dip scan (keyword-based)
+analyze_performance.py    # P&L analysis + missed opportunities
+optimize_triggers.py      # Manual trigger optimizer + backtesting
+backtest.py               # Historical backtesting
+test_*.py                 # Test scripts
+trading_config.json       # Trading config (editable, not in git)
+cdp_api_key.json          # API credentials (not in git)
+trading_monitor.log       # Runtime log
+trading_analysis.log      # Periodic analysis recommendations
 ```
 
-2. Create a virtual environment and activate it:
-```bash
-python3 -m venv venv
-source venv/bin/activate  # On Linux/Mac
-# or
-venv\Scripts\activate  # On Windows
-```
-
-3. Install dependencies:
-```bash
-pip install PyJWT
-```
-
-4. Set up your Coinbase API credentials:
-   - Create a CDP API key from Coinbase
-   - Save the credentials to `cdp_api_key.json` in the project directory
-
-5. Configure your trading parameters in `trading_config.json`
+---
 
 ## Configuration
 
@@ -68,121 +114,55 @@ pip install PyJWT
 
 ```json
 {
-  "trading_budget_eur": 50.0,           // Total budget to trade with
-  "minimum_balance_eur": 5.0,           // Stop trading if budget falls below this
-  "check_interval_minutes": 15,         // How often to check positions
-  "dry_run": false,                     // Set to true for testing without real trades
-  
+  "trading_budget_eur": 50.0,
+  "minimum_balance_eur": 5.0,
+  "check_interval_minutes": 15,
+  "dry_run": false,
+
   "triggers": {
-    "profit_target_percent": 25,        // Sell 50% at this profit level
-    "profit_target_sell_percent": 50,   // Percentage to sell at profit target
-    "final_profit_target_percent": 50,  // Sell 100% at this profit level
-    "stop_loss_percent": 15,            // Sell 100% if loss reaches this
-    "buy_dip_percent": 5,               // Buy when price dips this much
-    "buy_assets": ["BTC", "ETH"],       // Assets to buy-the-dip on
-    "buy_amount_eur": 10                // Amount in EUR for each buy
+    "profit_target_percent": 25,
+    "profit_target_sell_percent": 50,
+    "final_profit_target_percent": 40,
+    "stop_loss_percent": 20,
+    "buy_dip_percent": 12,
+    "buy_assets": ["BTC", "ETH"],
+    "buy_amount_eur": 10,
+    "buy_cooldown_hours": 24
   },
-  
+
   "fees": {
-    "taker_fee_rate": 0.012,            // Coinbase taker fee (1.2%)
-    "maker_fee_rate": 0.006             // Coinbase maker fee (0.6%)
+    "taker_fee_rate": 0.012,
+    "maker_fee_rate": 0.006
   },
-  
-  "tracked_assets": [                   // Assets to monitor and trade
-    "BTC", "ETH", "PEPE", "VET", ...
-  ],
-  
-  "position_tracking": {},              // Auto-populated with positions
-  "price_history": {},                  // Auto-populated with price data
-  "sold_positions": {}                  // Auto-populated for re-entry tracking
+
+  "tracked_assets": ["BTC", "ETH"],
+
+  "time_fallback": {
+    "enabled": true,
+    "max_idle_days": 30,
+    "fallback_amount_eur": 10,
+    "fallback_assets": ["BTC", "ETH"],
+    "require_dip": true,
+    "min_dip_percent": 10
+  },
+
+  "analysis": {
+    "enabled": true,
+    "frequency_days": 7,
+    "min_positions_for_analysis": 5
+  }
 }
 ```
 
-## Usage
+### How to Adjust
 
-### Start the Trading Bot
+- **dry_run: true** — Test without real trades
+- **stop_loss_percent** — Wider = fewer false stops, but larger max loss
+- **profit_target_percent** — Higher = more upside but fewer hits
+- **buy_dip_percent** — Higher = more selective entries
+- **buy_assets** — Add/remove coins (BTC, ETH recommended for stability)
 
-```bash
-python trading_monitor.py
-```
-
-The bot will:
-1. Load configuration and validate settings
-2. Connect to Coinbase API
-3. Start monitoring cycle at configured interval
-4. Execute trades based on trigger conditions
-5. Log all activity to `trading_monitor.log`
-
-### Stop the Bot
-
-Press `Ctrl+C` to gracefully stop the monitoring loop.
-
-### Dry Run Mode
-
-To test the bot without executing real trades, set `"dry_run": true` in `trading_config.json`:
-
-```json
-{
-  "dry_run": true,
-  ...
-}
-```
-
-In dry-run mode:
-- All trades are simulated
-- Budget tracking is maintained
-- No actual API orders are placed
-- Useful for strategy testing
-
-## File Structure
-
-```
-coinbase/
-├── trading_monitor.py      # Main bot script with monitoring loop
-├── coinbase_api.py          # Coinbase API wrapper and utilities
-├── trading_config.json      # Trading configuration (user-editable)
-├── cdp_api_key.json         # API credentials (not in git)
-├── trading_monitor.log      # Runtime log file
-├── get_btc_price.py         # Utility to check current BTC price
-├── backtest.py              # Backtesting utilities
-├── test_*.py                # Various test scripts
-└── README.md                # This file
-```
-
-## How It Works
-
-### Monitoring Cycle
-
-1. **Check Holdings**: Fetches current portfolio from Coinbase
-2. **Track Prices**: Records current prices for buy-the-dip detection
-3. **Check Sell Triggers**: For each position, checks if profit/loss targets are hit
-4. **Execute Sells**: Places market sell orders when triggers activate
-5. **Check Buy Triggers**: Looks for dip-buying and re-entry opportunities
-6. **Execute Buys**: Places market buy orders for qualified opportunities
-7. **Update Tracking**: Saves position and price data
-8. **Sleep**: Waits for next cycle interval
-
-### Position Tracking
-
-When you acquire a position (either manually or via the bot), the bot tracks:
-- Entry price and currency
-- Entry timestamp
-- Position size
-- Partial sells (for staged profit-taking)
-
-### Price History
-
-The bot maintains a 7-day rolling window of prices for configured buy assets:
-- Used to calculate 7-day highs
-- Enables buy-the-dip detection
-- Automatically cleaned up after 7 days
-
-### Sold Position Tracking
-
-When a position is fully sold:
-- Sale price and timestamp recorded
-- Tracked for 30 days for re-entry opportunities
-- Automatically expires after 30 days
+---
 
 ## API Reference
 
@@ -194,77 +174,72 @@ from coinbase_api import CoinbaseAPI
 api = CoinbaseAPI('cdp_api_key.json')
 
 # Get current price
-price_data = api.get_price('BTC')  # Returns {'price': 93000, 'currency': 'USDC', ...}
+price_data = api.get_price('BTC')  # {'price': 93000, 'currency': 'USDC', ...}
 
 # Get account balances
 accounts = api.get_accounts()
-
-# Get specific currency balance
-eur_balance = api.get_balance('EUR')
+usdc_balance = api.get_balance('USDC')
 
 # Place a market order
-api.place_order('BTC-EUR', 'BUY', 100.0, 'quote_size')  # Buy €100 worth of BTC
-api.place_order('BTC-EUR', 'SELL', 0.001, 'base_size')  # Sell 0.001 BTC
+api.place_order('BTC-USDC', 'BUY', 10.0, 'quote_size')     # Buy $10 worth
+api.place_order('BTC-USDC', 'SELL', 0.001, 'base_size')    # Sell 0.001 BTC
 ```
+
+---
 
 ## Safety Features
 
-- **Budget Protection**: Stops trading if budget falls below minimum
-- **Rate Limiting**: Built-in API rate limiting (10 req/second max)
+- **Budget Protection**: Halts trading below minimum balance
+- **Rate Limiting**: 10 requests/second max on Coinbase API
 - **Retry Logic**: Automatic retries with exponential backoff
-- **Precision Rounding**: Proper order size rounding to prevent API rejections
-- **Error Logging**: Comprehensive error logging for debugging
-- **Dry-Run Testing**: Test strategies without risking capital
+- **Precision Rounding**: Order sizes rounded to API requirements
+- **Error Logging**: All errors logged to `trading_monitor.log`
+- **Dry-Run Mode**: Strategy testing without real capital
+
+---
 
 ## Logging
 
-All activity is logged to `trading_monitor.log`:
+All activity logged to `trading_monitor.log`:
 - Trade executions (buy/sell)
 - Position tracking updates
 - Trigger activations
 - API errors and retries
-- Configuration changes
 
-Console output provides real-time monitoring feedback.
+Console output provides real-time monitoring.
 
-## Common Issues
+Periodic analysis writes to `trading_analysis.log`:
+- Portfolio P&L, win rate, max gain/loss
+- Current vs. suggested trigger values
+- Changes ≥2% are flagged for manual review
 
-### "Insufficient funds" errors
-- Check your actual balance matches tracked budget
-- Ensure minimum balance protection isn't too high
-- Verify fee calculations are accurate
+---
 
-### "Invalid order size" errors
-- The bot automatically rounds to correct precision
-- Check that buy amounts meet minimum order sizes
-- Ensure product is available for trading
+## Known Issues & Limitations
 
-### No buy triggers activating
-- Need 7 days of price history for buy-the-dip
-- Verify price is within 5-7% dip range
-- Check that asset isn't already held (no duplicate buys)
+- **Insufficient funds**: Check real balance vs. tracked budget
+- **Invalid order size**: Bot auto-rounds, but minimum order sizes apply
+- **No buy triggers**: Need 7+ days of price history for dip detection
+- **Tiny positions**: Very small holdings may fall below minimum order size
+- **No auto-apply**: Analysis recommendations require manual config update
+
+---
 
 ## Disclaimer
 
 This bot is for educational purposes. Cryptocurrency trading carries significant risk:
-- You can lose all your invested capital
-- Past performance doesn't guarantee future results
+
+- You can lose all invested capital
+- Past performance does not guarantee future results
 - Test thoroughly in dry-run mode before live trading
 - Start with small amounts you can afford to lose
-- Monitor the bot regularly - automation doesn't mean "set and forget"
+- Monitor the bot regularly — automation does not mean "set and forget"
 
 **Use at your own risk. The authors take no responsibility for any financial losses.**
 
-## License
+---
 
-This project is provided as-is for educational and personal use.
-
-## Contributing
-
-This is a personal trading bot. Feel free to fork and modify for your own use.
-
-## Support
-
-For issues with:
-- **Coinbase API**: Check [Coinbase Developer Documentation](https://docs.cloud.coinbase.com/)
-- **This Bot**: Review logs in `trading_monitor.log` and enable debug logging if needed
+**Project Location**: `~/prog/trading-bot`
+**Created**: February 2026
+**Last Updated**: November 13, 2026 (Phase 5 triggers)
+**Maintained By**: Curt Galloway
